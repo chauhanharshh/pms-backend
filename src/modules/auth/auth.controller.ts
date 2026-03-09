@@ -1,0 +1,39 @@
+import { Response, NextFunction } from 'express';
+import { AuthRequest } from '../../types';
+import { AuthService } from './auth.service';
+import { ResponseHandler } from '../../utils/response';
+import { loginSchema } from './auth.validation';
+
+const authService = new AuthService();
+
+export class AuthController {
+  async login(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const input = loginSchema.parse(req.body);
+      const result = await authService.login(input);
+      return ResponseHandler.success(res, result, 'Login successful');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getProfile(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const userId = req.user!.userId;
+      const profile = await authService.getProfile(userId);
+      return ResponseHandler.success(res, profile);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async logout(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      // In a stateless JWT system, logout is handled client-side
+      // Server can implement token blacklisting if needed
+      return ResponseHandler.success(res, null, 'Logout successful');
+    } catch (error) {
+      next(error);
+    }
+  }
+}

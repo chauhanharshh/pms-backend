@@ -1,0 +1,6 @@
+﻿src/modules/day-closing/day-closing.service.ts(86,66): error TS18047: 'inv.bill' is possibly 'null'.
+src/modules/invoices/invoices.service.ts(180,40): error TS18047: 'bill' is possibly 'null'.
+src/modules/invoices/invoices.service.ts(189,32): error TS18047: 'bill' is possibly 'null'.
+src/modules/invoices/invoices.service.ts(190,32): error TS18047: 'bill' is possibly 'null'.
+src/modules/invoices/invoices.service.ts(203,30): error TS18047: 'bill' is possibly 'null'.
+src/modules/invoices/invoices.service.ts(205,45): error TS18047: 'bill' is possibly 'null'.

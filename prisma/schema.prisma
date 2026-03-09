@@ -1,0 +1,694 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Hotel {
+  id                   String               @id @default(uuid()) @db.Uuid
+  name                 String               @db.VarChar(255)
+  address              String?              @db.VarChar(500)
+  city                 String?              @db.VarChar(100)
+  state                String?              @db.VarChar(100)
+  phone                String?              @db.VarChar(20)
+  email                String?              @db.VarChar(255)
+  website              String?              @db.VarChar(255)
+  gstNumber            String?              @db.VarChar(50)
+  checkInTime          String               @default("14:00") @db.VarChar(10)
+  checkOutTime         String               @default("12:00") @db.VarChar(10)
+  taxRate              Decimal              @default(12.00) @db.Decimal(5, 2)
+  currency             String               @default("INR") @db.VarChar(3)
+  isActive             Boolean              @default(true)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  createdBy            String?              @db.Uuid
+  updatedBy            String?              @db.Uuid
+  accentColor          String?              @db.VarChar(20)
+  headerColor          String?              @db.VarChar(20)
+  isCustomTheme        Boolean              @default(false)
+  sidebarColor         String?              @db.VarChar(20)
+  floors               Int?                 @default(1)
+  rating               Int?                 @default(0)
+  totalRooms           Int?                 @default(0)
+  posBossMode          Boolean              @default(false)
+  advancePayments      AdvancePayment[]
+  bills                Bill[]
+  bookings             Booking[]
+  companies            Company[]
+  dayClosings          DayClosing[]
+  expenses             Expense[]
+  invoices             Invoice[]
+  liabilities          Liability[]
+  miscCharges          MiscCharge[]
+  paymentVouchers      PaymentVoucher[]
+  pettyCash            PettyCash[]
+  restaurantCategories RestaurantCategory[]
+  restaurantKots       RestaurantKOT[]
+  restaurantMenu       RestaurantMenu[]
+  restaurantOrders     RestaurantOrder[]
+  roomBlocks           RoomBlock[]
+  roomTypes            RoomType[]
+  rooms                Room[]
+  users                User[]
+  vendors              Vendor[]
+  stewards             HotelSteward[]
+
+  @@index([isActive])
+  @@map("hotels")
+}
+
+model Vendor {
+  id            String   @id @default(uuid()) @db.Uuid
+  hotelId       String   @db.Uuid
+  name          String   @db.VarChar(255)
+  category      String   @db.VarChar(100)
+  contactPerson String?  @db.VarChar(255)
+  phone         String?  @db.VarChar(20)
+  email         String?  @db.VarChar(255)
+  address       String?  @db.VarChar(500)
+  gstNumber     String?  @db.VarChar(50)
+  totalOrders   Int      @default(0)
+  totalPaid     Decimal  @default(0) @db.Decimal(10, 2)
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  hotel         Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@map("vendors")
+}
+
+model RoomBlock {
+  id         String   @id @default(uuid()) @db.Uuid
+  hotelId    String   @db.Uuid
+  roomId     String   @db.Uuid
+  roomNumber String   @db.VarChar(20)
+  reason     String   @db.VarChar(500)
+  fromDate   DateTime @db.Date
+  toDate     DateTime @db.Date
+  blockedBy  String   @db.VarChar(100)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  hotel      Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([roomId])
+  @@map("room_blocks")
+}
+
+model PettyCash {
+  id          String   @id @default(uuid()) @db.Uuid
+  hotelId     String   @db.Uuid
+  date        DateTime @db.Date
+  description String   @db.VarChar(500)
+  type        String   @db.VarChar(20)
+  amount      Decimal  @db.Decimal(10, 2)
+  category    String   @db.VarChar(100)
+  balance     Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@map("petty_cash")
+}
+
+model Liability {
+  id             String   @id @default(uuid()) @db.Uuid
+  hotelId        String   @db.Uuid
+  vendorName     String   @db.VarChar(255)
+  vendorType     String   @db.VarChar(100)
+  description    String   @db.VarChar(500)
+  amount         Decimal  @db.Decimal(10, 2)
+  paidAmount     Decimal  @default(0) @db.Decimal(10, 2)
+  dueDate        DateTime @db.Date
+  status         String   @db.VarChar(20)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  paymentHistory Json?
+  hotel          Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@map("liabilities")
+}
+
+model SystemSettings {
+  id                         String   @id @default(uuid()) @db.Uuid
+  globalSidebarColor         String?  @default("#1F2937") @db.VarChar(20)
+  globalHeaderColor          String?  @default("#ffffff") @db.VarChar(20)
+  globalAccentColor          String?  @default("#C6A75E") @db.VarChar(20)
+  updatedAt                  DateTime @updatedAt
+  enableRestaurantMultiHotel Boolean  @default(false)
+
+  @@map("system_settings")
+}
+
+model Company {
+  id            String    @id @default(uuid()) @db.Uuid
+  hotelId       String    @db.Uuid
+  name          String    @db.VarChar(255)
+  gstNumber     String?   @db.VarChar(50)
+  contactPerson String?   @db.VarChar(255)
+  phone         String?   @db.VarChar(20)
+  email         String?   @db.VarChar(255)
+  address       String?   @db.VarChar(500)
+  creditLimit   Decimal?  @db.Decimal(10, 2)
+  paymentTerms  String?   @db.VarChar(255)
+  isActive      Boolean   @default(true)
+  isDeleted     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdBy     String?   @db.Uuid
+  updatedBy     String?   @db.Uuid
+  bookings      Booking[]
+  hotel         Hotel     @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@unique([hotelId, name])
+  @@index([hotelId])
+  @@index([isActive])
+  @@map("companies")
+}
+
+model User {
+  id           String       @id @default(uuid()) @db.Uuid
+  hotelId      String?      @db.Uuid
+  username     String       @unique @db.VarChar(100)
+  passwordHash String       @db.VarChar(255)
+  fullName     String       @db.VarChar(255)
+  email        String?      @db.VarChar(255)
+  phone        String?      @db.VarChar(20)
+  role         UserRole
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  createdBy    String?      @db.Uuid
+  updatedBy    String?      @db.Uuid
+  dayClosings  DayClosing[]
+  hotel        Hotel?       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([username])
+  @@index([hotelId])
+  @@map("users")
+}
+
+model RoomType {
+  id           String   @id @default(uuid()) @db.Uuid
+  hotelId      String   @db.Uuid
+  name         String   @db.VarChar(100)
+  description  String?
+  basePrice    Decimal  @db.Decimal(10, 2)
+  maxOccupancy Int      @default(2)
+  amenities    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdBy    String?  @db.Uuid
+  updatedBy    String?  @db.Uuid
+  taxRate      Decimal  @default(12.00) @db.Decimal(5, 2)
+  hotel        Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  rooms        Room[]
+
+  @@unique([hotelId, name])
+  @@index([hotelId])
+  @@map("room_types")
+}
+
+model Room {
+  id               String            @id @default(uuid()) @db.Uuid
+  hotelId          String            @db.Uuid
+  roomNumber       String            @db.VarChar(20)
+  floor            Int
+  typeId           String            @db.Uuid
+  status           RoomStatus        @default(vacant)
+  basePrice        Decimal           @db.Decimal(10, 2)
+  maxOccupancy     Int               @default(2)
+  maintenanceNote  String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  createdBy        String?           @db.Uuid
+  updatedBy        String?           @db.Uuid
+  taxRate          Decimal           @default(12.00) @db.Decimal(5, 2)
+  bookings         Booking[]
+  restaurantOrders RestaurantOrder[]
+  hotel            Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  roomType         RoomType          @relation(fields: [typeId], references: [id])
+
+  @@unique([hotelId, roomNumber])
+  @@index([hotelId, status])
+  @@map("rooms")
+}
+
+model Booking {
+  id               String            @id @default(uuid()) @db.Uuid
+  hotelId          String            @db.Uuid
+  roomId           String            @db.Uuid
+  guestName        String            @db.VarChar(255)
+  guestPhone       String            @db.VarChar(20)
+  guestEmail       String?           @db.VarChar(255)
+  idProof          String?           @db.VarChar(100)
+  addressLine      String?           @db.VarChar(500)
+  checkInDate      DateTime          @db.Date
+  checkOutDate     DateTime          @db.Date
+  adults           Int               @default(1)
+  children         Int               @default(0)
+  totalAmount      Decimal           @db.Decimal(10, 2)
+  advanceAmount    Decimal           @default(0) @db.Decimal(10, 2)
+  status           BookingStatus     @default(pending)
+  source           BookingSource     @default(walk_in)
+  specialRequests  String?
+  isDeleted        Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  createdBy        String?           @db.Uuid
+  updatedBy        String?           @db.Uuid
+  companyId        String?           @db.Uuid
+  businessSource   String?           @db.VarChar(100)
+  comingFrom       String?           @db.VarChar(255)
+  goingTo          String?           @db.VarChar(255)
+  marketSegment    String?           @db.VarChar(100)
+  purposeOfVisit   String            @default("Tourism") @db.VarChar(100)
+  remarks          String?           @db.VarChar(1000)
+  vehicleDetails   String?           @db.VarChar(100)
+  checkInTime      String?           @db.VarChar(10)
+  checkOutTime     String?           @db.VarChar(10)
+  paymentMode      PaymentMethod     @default(cash)
+  advancePayments  AdvancePayment[]
+  bill             Bill?
+  company          Company?          @relation(fields: [companyId], references: [id])
+  hotel            Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  room             Room              @relation(fields: [roomId], references: [id])
+  miscCharges      MiscCharge[]
+  restaurantOrders RestaurantOrder[]
+
+  @@index([hotelId])
+  @@index([roomId])
+  @@index([companyId])
+  @@index([status])
+  @@index([checkInDate, checkOutDate])
+  @@index([hotelId, status])
+  @@map("bookings")
+}
+
+model AdvancePayment {
+  id            String               @id @default(uuid()) @db.Uuid
+  hotelId       String               @db.Uuid
+  bookingId     String?              @db.Uuid
+  guestName     String               @db.VarChar(255)
+  amount        Decimal              @db.Decimal(10, 2)
+  usedAmount    Decimal              @default(0) @db.Decimal(10, 2)
+  paymentMethod PaymentMethod
+  status        AdvancePaymentStatus @default(pending)
+  remarks       String?
+  paymentDate   DateTime             @default(now())
+  isDeleted     Boolean              @default(false)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  createdBy     String?              @db.Uuid
+  updatedBy     String?              @db.Uuid
+  booking       Booking?             @relation(fields: [bookingId], references: [id])
+  hotel         Hotel                @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([bookingId])
+  @@index([status])
+  @@map("advance_payments")
+}
+
+model MiscCharge {
+  id               String             @id @default(uuid()) @db.Uuid
+  hotelId          String             @db.Uuid
+  bookingId        String?            @db.Uuid
+  category         MiscChargeCategory
+  description      String             @db.VarChar(500)
+  amount           Decimal            @db.Decimal(10, 2)
+  quantity         Int                @default(1)
+  addedToFinalBill Boolean            @default(false)
+  chargeDate       DateTime           @default(now())
+  isDeleted        Boolean            @default(false)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  createdBy        String?            @db.Uuid
+  updatedBy        String?            @db.Uuid
+  booking          Booking?           @relation(fields: [bookingId], references: [id])
+  hotel            Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([bookingId])
+  @@map("misc_charges")
+}
+
+model Bill {
+  id                String     @id @default(uuid()) @db.Uuid
+  hotelId           String     @db.Uuid
+  bookingId         String     @unique @db.Uuid
+  roomCharges       Decimal    @default(0) @db.Decimal(10, 2)
+  restaurantCharges Decimal    @default(0) @db.Decimal(10, 2)
+  miscCharges       Decimal    @default(0) @db.Decimal(10, 2)
+  subtotal          Decimal    @default(0) @db.Decimal(10, 2)
+  discount          Decimal    @default(0) @db.Decimal(10, 2)
+  taxAmount         Decimal    @default(0) @db.Decimal(10, 2)
+  totalAmount       Decimal    @default(0) @db.Decimal(10, 2)
+  paidAmount        Decimal    @default(0) @db.Decimal(10, 2)
+  balanceDue        Decimal    @default(0) @db.Decimal(10, 2)
+  status            BillStatus @default(pending)
+  remarks           String?
+  isDeleted         Boolean    @default(false)
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  createdBy         String?    @db.Uuid
+  updatedBy         String?    @db.Uuid
+  booking           Booking    @relation(fields: [bookingId], references: [id])
+  hotel             Hotel      @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  invoice           Invoice?
+
+  @@index([hotelId])
+  @@index([status])
+  @@index([hotelId, status])
+  @@map("bills")
+}
+
+model Invoice {
+  id                String           @id @default(uuid()) @db.Uuid
+  hotelId           String           @db.Uuid
+  billId            String?          @unique @db.Uuid
+  invoiceNumber     String           @db.VarChar(50)
+  subtotal          Decimal          @db.Decimal(10, 2)
+  cgst              Decimal          @default(0) @db.Decimal(10, 2)
+  sgst              Decimal          @default(0) @db.Decimal(10, 2)
+  igst              Decimal          @default(0) @db.Decimal(10, 2)
+  totalAmount       Decimal          @db.Decimal(10, 2)
+  status            InvoiceStatus    @default(issued)
+  invoiceDate       DateTime         @default(now())
+  isDeleted         Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  createdBy         String?          @db.Uuid
+  updatedBy         String?          @db.Uuid
+  paymentMethod     String?          @db.VarChar(50)
+  restaurantOrderId String?          @unique @db.Uuid
+  serviceCharge     Decimal          @default(0) @db.Decimal(10, 2)
+  source            String?          @db.VarChar(50)
+  type              InvoiceType      @default(ROOM)
+  bill              Bill?            @relation(fields: [billId], references: [id])
+  hotel             Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  restaurantOrder   RestaurantOrder? @relation("RestaurantOrderInvoice", fields: [restaurantOrderId], references: [id])
+
+  @@unique([hotelId, invoiceNumber])
+  @@index([hotelId])
+  @@index([invoiceNumber])
+  @@index([type])
+  @@map("invoices")
+}
+
+model Expense {
+  id            String        @id @default(uuid()) @db.Uuid
+  hotelId       String        @db.Uuid
+  category      String        @db.VarChar(100)
+  description   String        @db.VarChar(500)
+  amount        Decimal       @db.Decimal(10, 2)
+  payee         String        @db.VarChar(255)
+  paymentMethod PaymentMethod
+  expenseDate   DateTime      @default(now())
+  receiptNumber String?       @db.VarChar(100)
+  isDeleted     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  createdBy     String?       @db.Uuid
+  updatedBy     String?       @db.Uuid
+  hotel         Hotel         @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([expenseDate])
+  @@index([hotelId, expenseDate])
+  @@map("expenses")
+}
+
+model PaymentVoucher {
+  id            String        @id @default(uuid()) @db.Uuid
+  hotelId       String        @db.Uuid
+  voucherNumber String        @db.VarChar(50)
+  payee         String        @db.VarChar(255)
+  amount        Decimal       @db.Decimal(10, 2)
+  paymentMethod PaymentMethod
+  purpose       String        @db.VarChar(500)
+  voucherDate   DateTime      @default(now())
+  isDeleted     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  createdBy     String?       @db.Uuid
+  updatedBy     String?       @db.Uuid
+  hotel         Hotel         @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@unique([hotelId, voucherNumber])
+  @@index([hotelId])
+  @@map("payment_vouchers")
+}
+
+model RestaurantCategory {
+  id          String           @id @default(uuid()) @db.Uuid
+  hotelId     String           @db.Uuid
+  name        String           @db.VarChar(100)
+  description String?
+  sortOrder   Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  createdBy   String?          @db.Uuid
+  updatedBy   String?          @db.Uuid
+  hotel       Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  menuItems   RestaurantMenu[]
+
+  @@unique([hotelId, name])
+  @@index([hotelId])
+  @@map("restaurant_categories")
+}
+
+model RestaurantMenu {
+  id              String                @id @default(uuid()) @db.Uuid
+  hotelId         String                @db.Uuid
+  categoryId      String                @db.Uuid
+  itemName        String                @db.VarChar(255)
+  description     String?
+  price           Decimal               @db.Decimal(10, 2)
+  taxRate         Decimal               @default(5.00) @db.Decimal(5, 2)
+  isAvailable     Boolean               @default(true)
+  isVeg           Boolean               @default(true)
+  preparationTime Int?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  createdBy       String?               @db.Uuid
+  updatedBy       String?               @db.Uuid
+  category        RestaurantCategory    @relation(fields: [categoryId], references: [id])
+  hotel           Hotel                 @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  orderItems      RestaurantOrderItem[]
+
+  @@index([hotelId])
+  @@index([categoryId])
+  @@index([hotelId, isAvailable])
+  @@map("restaurant_menu")
+}
+
+model RestaurantOrder {
+  id            String                   @id @default(uuid()) @db.Uuid
+  hotelId       String                   @db.Uuid
+  orderNumber   String                   @db.VarChar(50)
+  bookingId     String?                  @db.Uuid
+  tableNumber   String?                  @db.VarChar(20)
+  guestName     String?                  @db.VarChar(255)
+  subtotal      Decimal                  @db.Decimal(10, 2)
+  gst           Decimal                  @db.Decimal(10, 2)
+  totalAmount   Decimal                  @db.Decimal(10, 2)
+  status        RestaurantOrderStatus    @default(pending)
+  paymentMethod RestaurantPaymentMethod?
+  kotPrintedAt  DateTime?
+  servedAt      DateTime?
+  billedAt      DateTime?
+  isDeleted     Boolean                  @default(false)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  createdBy     String?                  @db.Uuid
+  updatedBy     String?                  @db.Uuid
+  discount      Decimal                  @default(0) @db.Decimal(10, 2)
+  invoicedAt    DateTime?
+  issuedAt      DateTime?
+  issuedBy      String?                  @db.Uuid
+  paidAt        DateTime?
+  paidBy        String?                  @db.Uuid
+  roomId        String?                  @db.Uuid
+  serviceCharge Decimal                  @default(0) @db.Decimal(10, 2)
+  stewardName   String?                  @db.VarChar(255)
+  invoice       Invoice?                 @relation("RestaurantOrderInvoice")
+  kots          RestaurantKOT[]
+  orderItems    RestaurantOrderItem[]
+  booking       Booking?                 @relation(fields: [bookingId], references: [id])
+  hotel         Hotel                    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  room          Room?                    @relation(fields: [roomId], references: [id])
+
+  @@unique([hotelId, orderNumber])
+  @@index([hotelId])
+  @@index([bookingId])
+  @@index([status])
+  @@map("restaurant_orders")
+}
+
+model RestaurantOrderItem {
+  id          String          @id @default(uuid()) @db.Uuid
+  orderId     String          @db.Uuid
+  menuItemId  String          @db.Uuid
+  quantity    Int
+  price       Decimal         @db.Decimal(10, 2)
+  itemTotal   Decimal         @db.Decimal(10, 2)
+  specialNote String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  menuItem    RestaurantMenu  @relation(fields: [menuItemId], references: [id])
+  order       RestaurantOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@map("restaurant_order_items")
+}
+
+model RestaurantKOT {
+  id              String          @id @default(uuid()) @db.Uuid
+  hotelId         String          @db.Uuid
+  orderId         String          @db.Uuid
+  kotNumber       String          @db.VarChar(50)
+  items           Json
+  status          KOTStatus       @default(OPEN)
+  linkedInvoiceId String?         @db.Uuid
+  isDeleted       Boolean         @default(false)
+  printedAt       DateTime        @default(now())
+  printedBy       String?         @db.VarChar(100)
+  hotel           Hotel           @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  order           RestaurantOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@index([orderId])
+  @@map("restaurant_kots")
+}
+
+model DayClosing {
+  id           String   @id @default(uuid()) @db.Uuid
+  hotelId      String   @db.Uuid
+  workingDate  DateTime @db.Date
+  cashReceived Decimal  @db.Decimal(10, 2)
+  bankReceived Decimal  @db.Decimal(10, 2)
+  cashPaid     Decimal  @db.Decimal(10, 2)
+  bankPaid     Decimal  @db.Decimal(10, 2)
+  creditSale   Decimal  @db.Decimal(10, 2)
+  closedBy     String   @db.Uuid
+  closedAt     DateTime @default(now())
+  status       String   @default("closed")
+  user         User     @relation(fields: [closedBy], references: [id])
+  hotel        Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@unique([hotelId, workingDate])
+  @@index([hotelId])
+  @@map("day_closings")
+}
+
+
+model HotelSteward {
+  id        String   @id @default(uuid()) @db.Uuid
+  hotelId   String   @db.Uuid
+  name      String   @db.VarChar(100)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  hotel     Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@index([hotelId])
+  @@map("hotel_stewards")
+}
+
+enum UserRole {
+  admin
+  hotel_manager
+  hotel_user
+}
+
+enum RoomStatus {
+  vacant
+  occupied
+  cleaning
+  maintenance
+}
+
+enum BookingStatus {
+  confirmed
+  checked_in
+  checked_out
+  cancelled
+  pending
+}
+
+enum BookingSource {
+  walk_in
+  online
+  phone
+  reservation
+}
+
+enum PaymentMethod {
+  cash
+  bank
+  card
+  upi
+}
+
+enum AdvancePaymentStatus {
+  pending
+  linked
+  adjusted
+  refunded
+}
+
+enum MiscChargeCategory {
+  laundry
+  spa
+  transport
+  minibar
+  other
+}
+
+enum BillStatus {
+  pending
+  partial
+  paid
+  finalized
+}
+
+enum InvoiceStatus {
+  draft
+  issued
+  cancelled
+  paid
+}
+
+enum InvoiceType {
+  ROOM
+  RESTAURANT
+}
+
+enum RestaurantOrderStatus {
+  pending
+  kot_printed
+  served
+  billed
+  cancelled
+}
+
+enum RestaurantPaymentMethod {
+  cash
+  card
+  upi
+  room
+}
+
+enum KOTStatus {
+  OPEN
+  CONVERTED
+  CANCELLED
+}

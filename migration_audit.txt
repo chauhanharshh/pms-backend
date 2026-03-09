@@ -1,0 +1,9 @@
+--- Migration History ---
+20260303230127_add_kot_status_and_invoicelink - steps: 1 - at: Wed Mar 04 2026 04:31:27 GMT+0530 (India Standard Time)
+20260303154633_make_hotel_fields_optional - steps: 1 - at: Wed Mar 04 2026 04:31:19 GMT+0530 (India Standard Time)
+20260303153842_add_hotel_fields - steps: 1 - at: Wed Mar 04 2026 04:31:19 GMT+0530 (India Standard Time)
+20260303123814_add_tax_rate_to_room_and_type - steps: 1 - at: Wed Mar 04 2026 04:31:19 GMT+0530 (India Standard Time)
+20260303123753_add_room_tax_rate - steps: 1 - at: Wed Mar 04 2026 04:31:19 GMT+0530 (India Standard Time)
+20260303121810_add_disconnected_modules - steps: 1 - at: Wed Mar 04 2026 04:31:19 GMT+0530 (India Standard Time)
+20260303110353_add_theme_settings - steps: 1 - at: Wed Mar 04 2026 04:31:19 GMT+0530 (India Standard Time)
+20260301175109_init - steps: 1 - at: Wed Mar 04 2026 04:31:18 GMT+0530 (India Standard Time)

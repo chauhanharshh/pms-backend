@@ -1,0 +1,276 @@
+import prisma from '../../config/database';
+import { NotFoundError, BadRequestError } from '../../utils/errors';
+import { Decimal } from '@prisma/client/runtime/library';
+import { InvoiceStatus } from '@prisma/client';
+import { calculateRoomTax } from '../../utils/tax';
+
+export class InvoicesService {
+    async getInvoicesByHotel(hotelId: string, status?: string) {
+        const where: any = { hotelId, isDeleted: false };
+        if (status) where.status = status;
+        return prisma.invoice.findMany({
+            where,
+            include: {
+                bill: {
+                    include: {
+                        booking: { select: { guestName: true, guestPhone: true, checkInDate: true, checkOutDate: true } },
+                    },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+    }
+
+    async getInvoiceById(invoiceId: string, hotelId: string) {
+        const invoice = await prisma.invoice.findFirst({
+            where: { id: invoiceId, hotelId },
+            include: {
+                bill: {
+                    include: {
+                        booking: {
+                            include: {
+                                room: { include: { roomType: true } },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        if (!invoice) throw new NotFoundError('Invoice not found');
+        return invoice;
+    }
+
+    async updateInvoiceStatus(invoiceId: string, hotelId: string, status: string, userId: string) {
+        const invoice = await prisma.invoice.findFirst({ where: { id: invoiceId, hotelId } });
+        if (!invoice) throw new NotFoundError('Invoice not found');
+        return prisma.invoice.update({
+            where: { id: invoiceId },
+            data: { status: status as any, updatedBy: userId },
+        });
+    }
+
+    async generateInvoice(data: { billId: string; guestAddress?: string }, hotelId: string, userId: string) {
+        const bill = await prisma.bill.findFirst({
+            where: { id: data.billId, hotelId },
+            include: { booking: true, invoice: true }
+        });
+
+        if (!bill) throw new NotFoundError('Bill not found');
+        if (bill.invoice) throw new BadRequestError('Invoice already exists for this bill');
+        if (!bill.booking) throw new BadRequestError('Booking not associated with this bill');
+
+        return prisma.$transaction(async (tx) => {
+            // If address provided, update booking
+            if (data.guestAddress && data.guestAddress.trim() !== '') {
+                await tx.booking.update({
+                    where: { id: bill.bookingId },
+                    data: { addressLine: data.guestAddress }
+                });
+            }
+
+            // Merge unbilled restaurant orders
+            const pendingOrders = await tx.restaurantOrder.findMany({
+                where: {
+                    bookingId: bill.bookingId,
+                    hotelId,
+                    status: { in: ['pending', 'kot_printed', 'served'] }
+                }
+            });
+
+            if (pendingOrders.length > 0) {
+                const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+                const startOfDay = new Date();
+                startOfDay.setHours(0, 0, 0, 0);
+
+                let resInvoiceCount = await tx.invoice.count({
+                    where: { hotelId, type: 'RESTAURANT', createdAt: { gte: startOfDay } }
+                });
+
+                for (const order of pendingOrders) {
+                    const resInvoiceNumber = `INV-RES-${dateStr}-${(++resInvoiceCount).toString().padStart(4, '0')}`;
+
+                    await tx.invoice.create({
+                        data: {
+                            hotelId,
+                            restaurantOrderId: order.id,
+                            invoiceNumber: resInvoiceNumber,
+                            subtotal: order.subtotal,
+                            cgst: 0,
+                            sgst: 0,
+                            serviceCharge: order.serviceCharge,
+                            totalAmount: order.totalAmount,
+                            status: InvoiceStatus.issued,
+                            type: 'RESTAURANT',
+                            source: 'Checkout',
+                            createdBy: userId,
+                            updatedBy: userId
+                        }
+                    });
+
+                    await tx.restaurantOrder.update({
+                        where: { id: order.id },
+                        data: {
+                            status: 'billed',
+                            billedAt: new Date(),
+                            invoicedAt: new Date(),
+                            issuedAt: new Date(),
+                            issuedBy: userId,
+                            updatedBy: userId
+                        }
+                    });
+                }
+            }
+
+            // Recalculate totals
+            const hotel = await tx.hotel.findUnique({ where: { id: hotelId } });
+
+            const allOrders = await tx.restaurantOrder.findMany({
+                where: { bookingId: bill.bookingId, status: 'billed' }
+            });
+            const totalRestaurantCharges = allOrders.reduce((sum: any, o: any) => sum.add(o.totalAmount), new Decimal(0));
+
+            const miscChargesList = await tx.miscCharge.findMany({
+                where: { bookingId: bill.bookingId, isDeleted: false }
+            });
+            const totalMisc = miscChargesList.reduce((sum: any, m: any) => sum.add(m.amount.mul(m.quantity)), new Decimal(0));
+
+            const roomCharges = new Decimal(bill.roomCharges.toString());
+            const subtotal = roomCharges.add(totalRestaurantCharges).add(totalMisc);
+
+            // GST ONLY ON ROOM RENT using new rules
+            const nights = Math.max(1, Math.ceil(
+                (new Date(bill.booking.checkOutDate).getTime() - new Date(bill.booking.checkInDate).getTime()) / 86400000
+            ));
+            const dailyRent = roomCharges.div(nights);
+            const taxInfo = calculateRoomTax(dailyRent, nights);
+
+            const cgstAmount = taxInfo.cgstAmount;
+            const sgstAmount = taxInfo.sgstAmount;
+            const totalTax = taxInfo.amount;
+
+            const totalAmount = subtotal.add(totalTax);
+
+            // Update Bill with correct calculated amounts
+            await tx.bill.update({
+                where: { id: bill.id },
+                data: {
+                    restaurantCharges: totalRestaurantCharges,
+                    miscCharges: totalMisc,
+                    subtotal,
+                    taxAmount: totalTax,
+                    totalAmount,
+                    balanceDue: totalAmount.sub(bill.paidAmount),
+                    updatedBy: userId
+                }
+            });
+
+            // Generate sequential invoice number
+            const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const count = await tx.invoice.count({
+                where: {
+                    hotelId,
+                    createdAt: { gte: startOfDay }
+                }
+            });
+            const invoiceNumber = `INV-${dateStr}-${(count + 1).toString().padStart(4, '0')}`;
+
+            // Create Invoice
+            const invoice = await tx.invoice.create({
+                data: {
+                    hotelId,
+                    billId: bill.id,
+                    invoiceNumber,
+                    subtotal,
+                    cgst: cgstAmount,
+                    sgst: sgstAmount,
+                    totalAmount,
+                    status: (totalAmount.sub(bill.paidAmount)).lte(0) ? InvoiceStatus.paid : InvoiceStatus.issued,
+                    createdBy: userId,
+                    updatedBy: userId
+                },
+                include: {
+                    bill: {
+                        include: {
+                            booking: {
+                                include: { room: { include: { roomType: true } } }
+                            }
+                        }
+                    }
+                }
+            });
+
+            return invoice;
+        });
+    }
+
+    async payInvoice(invoiceId: string, hotelId: string, userId: string, paymentMode: string) {
+        const invoice = await prisma.invoice.findFirst({
+            where: { id: invoiceId, hotelId },
+            include: { bill: { include: { booking: true } } }
+        });
+
+        if (!invoice) throw new NotFoundError('Invoice not found');
+        if (invoice.status === InvoiceStatus.paid) throw new BadRequestError('Invoice is already paid');
+        if (invoice.status === InvoiceStatus.cancelled) throw new BadRequestError('Cannot pay a cancelled invoice');
+
+        const bill = invoice.bill;
+        if (!bill) {
+            // If there's no bill, this might be a standalone invoice (e.g. restaurant)
+            // If it's already paid, we are fine.
+            if ((invoice.status as string) === 'paid') return invoice;
+            throw new BadRequestError('Cannot settle an invoice without an associated bill');
+        }
+        const balanceDue = new Decimal(bill.balanceDue.toString() || '0');
+
+        if (balanceDue.lte(0)) throw new BadRequestError('Outstanding balance is already settled');
+
+        return prisma.$transaction(async (tx) => {
+            // Log Payment
+            await tx.advancePayment.create({
+                data: {
+                    hotelId,
+                    bookingId: bill.bookingId,
+                    guestName: bill.booking.guestName,
+                    amount: balanceDue,
+                    paymentMethod: paymentMode as any,
+                    status: 'adjusted',
+                    usedAmount: balanceDue,
+                    remarks: `Standalone Invoice Settlement for ${invoice.invoiceNumber}`,
+                    createdBy: userId,
+                    updatedBy: userId,
+                },
+            });
+
+            // Update Bill
+            await tx.bill.update({
+                where: { id: (bill as any).id },
+                data: {
+                    paidAmount: new Decimal((bill as any).paidAmount.toString()).add(balanceDue),
+                    balanceDue: 0,
+                    status: 'paid',
+                    updatedBy: userId,
+                },
+            });
+
+            // Update Invoice
+            const updatedInvoice = await tx.invoice.update({
+                where: { id: invoice.id },
+                data: { status: InvoiceStatus.paid, updatedBy: userId },
+                include: {
+                    bill: {
+                        include: {
+                            booking: {
+                                include: { room: { include: { roomType: true } } }
+                            }
+                        }
+                    }
+                }
+            });
+
+            return updatedInvoice;
+        });
+    }
+}
