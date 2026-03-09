@@ -1,4 +1,5 @@
 import prisma from '../../config/database';
+import { MENU_DATA } from '../../constants/menuData';
 import { CreateHotelInput, UpdateHotelInput } from './hotels.validation';
 import { NotFoundError, ForbiddenError } from '../../utils/errors';
 import logger from '../../utils/logger';
@@ -83,19 +84,42 @@ export class HotelsService {
         logger.info(`Created hotel manager user "${hotelUsername}" for hotel ${hotel.id}`);
       }
 
-      // 2. Auto-create default Restaurant Categories
-      const defaultCategories = ["Breakfast", "Main Course", "Beverages", "Desserts"];
-      for (let i = 0; i < defaultCategories.length; i++) {
-        await tx.restaurantCategory.create({
+
+      // 2. Auto-create full Restaurant Menu
+      for (let i = 0; i < MENU_DATA.length; i++) {
+        const catData = MENU_DATA[i];
+        const category = await tx.restaurantCategory.create({
           data: {
             hotelId: hotel.id,
-            name: defaultCategories[i],
+            name: catData.category,
             sortOrder: i,
             isActive: true,
             createdBy: userId,
             updatedBy: userId,
           }
         });
+
+        for (const item of catData.items) {
+          let isVeg = true;
+          const nameLower = item.name.toLowerCase();
+          if (nameLower.includes('chicken') || nameLower.includes('mutton') || nameLower.includes('fish') || nameLower.includes('egg') || nameLower.includes('omlette')) {
+            isVeg = false;
+          }
+
+          await tx.restaurantMenu.create({
+            data: {
+              hotelId: hotel.id,
+              categoryId: category.id,
+              itemName: item.name,
+              price: item.price,
+              taxRate: 5,
+              isAvailable: true,
+              isVeg: isVeg,
+              createdBy: userId,
+              updatedBy: userId,
+            }
+          });
+        }
       }
 
       // 3. Auto-create rooms

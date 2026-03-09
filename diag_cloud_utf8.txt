@@ -1,0 +1,219 @@
+﻿--- HOTELS ---
+[
+  {
+    "id": "00000000-0000-0000-0000-000000000001",
+    "name": "Grand Plaza Hotel"
+  },
+  {
+    "id": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f",
+    "name": "RayBan"
+  }
+]
+
+--- MENU STATS ---
+[
+  {
+    "_count": {
+      "id": 149
+    },
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "_count": {
+      "id": 149
+    },
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  }
+]
+
+--- USERS ---
+[
+  {
+    "id": "86d6fc99-b000-4db7-830c-fc8ef4c75a97",
+    "username": "admin",
+    "hotelId": null,
+    "role": "admin"
+  },
+  {
+    "id": "594ec509-1ed1-42ab-bffa-028eebdfc817",
+    "username": "manager",
+    "hotelId": "00000000-0000-0000-0000-000000000001",
+    "role": "hotel_manager"
+  },
+  {
+    "id": "f4ab2fcf-8eb6-4196-bcb5-ebcb2cb8abea",
+    "username": "frontdesk",
+    "hotelId": "00000000-0000-0000-0000-000000000001",
+    "role": "hotel_user"
+  },
+  {
+    "id": "f6df8ae8-c4c2-409d-adbe-760fe7e57b7a",
+    "username": "rayban",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f",
+    "role": "hotel_manager"
+  }
+]
+
+--- CATEGORIES ---
+[
+  {
+    "id": "9d53ae34-d826-4506-85c0-a8f7e1ed1572",
+    "name": "Good Morning",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "77594fe6-4dc0-4d15-b767-8e2032fb6656",
+    "name": "Breakfast",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "fa18f713-9660-41fe-9a65-6e4fa7352598",
+    "name": "Special",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "f6f72424-c22a-43c5-8a44-6645c47dcba6",
+    "name": "Snacks",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "860e2466-9e62-40ac-828b-d97e5485df1f",
+    "name": "Chinese Flavours",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "6cde0026-37c2-4d47-b079-80ac20bf655a",
+    "name": "Khusboo",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "d01de6a3-0a0c-4d42-9691-3cbcccccba30",
+    "name": "Tawa Se",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "3e9c6f0a-0011-42cb-aa76-7378d0f61999",
+    "name": "Staple",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "09b099b6-dadb-4f7b-9125-0f463c165c30",
+    "name": "Main Course",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "7fbde40b-fd16-4311-93b5-0a817b22d6d6",
+    "name": "Combo",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "bbcf38c5-8bd6-4089-8eae-1d7535b804a7",
+    "name": "Salad",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "5ed7770f-cc8b-410b-b9e8-e9c4e10665fb",
+    "name": "Sweetness",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "c8dec6f8-e76b-4b6e-bb30-4667defd11e3",
+    "name": "Raita Relish",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "e2250c24-b7a3-4b19-9e5e-91380d8076d5",
+    "name": "Cool Temptation",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "5bd2112d-ccbd-48d0-90a0-63e31b135128",
+    "name": "Refresh",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "77c64ed7-ee4c-4537-ae5b-ce538a421b7b",
+    "name": "Water",
+    "hotelId": "00000000-0000-0000-0000-000000000001"
+  },
+  {
+    "id": "f7cd830d-49db-4c0a-b0a0-eaab55b4fa8c",
+    "name": "Good Morning",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "c7c00aee-e87d-4023-83ef-c5900fdc3466",
+    "name": "Breakfast",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "b1550160-c0e3-40a9-9441-e5e45becb888",
+    "name": "Special",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "8303f4db-c5ee-48a6-9b5b-75ffaa439cbd",
+    "name": "Snacks",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "76e5cda3-1fc4-4125-8685-c32d25d6645b",
+    "name": "Chinese Flavours",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "bbda13af-8a60-43ae-9cb2-7ce885f25d25",
+    "name": "Khusboo",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "20afb102-0145-4ced-a438-c35bbdb4a180",
+    "name": "Tawa Se",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "1cd11328-285c-489a-a853-8b570c4d5357",
+    "name": "Staple",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "c6e954bd-d1f2-4865-a9b6-050911cfd181",
+    "name": "Main Course",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "d7402238-3cad-4016-8313-7b1b9e53c2ac",
+    "name": "Combo",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "2606b561-c2b0-4e1b-a4c6-4f572eaaa7bd",
+    "name": "Salad",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "af13dc78-ea11-4205-b471-0252a5e9953b",
+    "name": "Sweetness",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "785d440f-2018-4db4-8eb9-d04b2dd5ef07",
+    "name": "Raita Relish",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "1fc976d6-1523-4d1e-bbe6-b59f069f5b96",
+    "name": "Cool Temptation",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "acd0ab7b-3866-41e9-9812-17e01f7d9398",
+    "name": "Refresh",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  },
+  {
+    "id": "b954e1f1-f944-4f3b-925e-cd93304ddf45",
+    "name": "Water",
+    "hotelId": "6702fa38-7920-4256-b6d3-6fbf3b52bf3f"
+  }
+]

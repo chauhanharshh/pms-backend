@@ -1,0 +1,41 @@
+﻿--- CLOUD HOTELS REPORT ---
+Hotel: Grand Plaza Hotel (00000000-0000-0000-0000-000000000001)
+  Categories: 16
+  Menu Items: 149
+  Users: 2
+---------------------------
+Hotel: RayBan (6702fa38-7920-4256-b6d3-6fbf3b52bf3f)
+  Categories: 16
+  Menu Items: 149
+  Users: 1
+---------------------------
+
+--- CLOUD USERS ---
+[
+  {
+    "username": "admin",
+    "role": "admin",
+    "hotel": null
+  },
+  {
+    "username": "manager",
+    "role": "hotel_manager",
+    "hotel": {
+      "name": "Grand Plaza Hotel"
+    }
+  },
+  {
+    "username": "frontdesk",
+    "role": "hotel_user",
+    "hotel": {
+      "name": "Grand Plaza Hotel"
+    }
+  },
+  {
+    "username": "rayban",
+    "role": "hotel_manager",
+    "hotel": {
+      "name": "RayBan"
+    }
+  }
+]

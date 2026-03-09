@@ -53,9 +53,9 @@ model Hotel {
   roomBlocks           RoomBlock[]
   roomTypes            RoomType[]
   rooms                Room[]
+  stewards             stewards[]
   users                User[]
   vendors              Vendor[]
-  stewards             HotelSteward[]
 
   @@index([isActive])
   @@map("hotels")
@@ -520,13 +520,14 @@ model RestaurantOrder {
   paidBy        String?                  @db.Uuid
   roomId        String?                  @db.Uuid
   serviceCharge Decimal                  @default(0) @db.Decimal(10, 2)
-  stewardName   String?                  @db.VarChar(255)
+  stewardId     String?                  @db.Uuid
   invoice       Invoice?                 @relation("RestaurantOrderInvoice")
   kots          RestaurantKOT[]
   orderItems    RestaurantOrderItem[]
   booking       Booking?                 @relation(fields: [bookingId], references: [id])
   hotel         Hotel                    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   room          Room?                    @relation(fields: [roomId], references: [id])
+  stewards      stewards?                @relation(fields: [stewardId], references: [id])
 
   @@unique([hotelId, orderNumber])
   @@index([hotelId])
@@ -590,18 +591,18 @@ model DayClosing {
   @@map("day_closings")
 }
 
+model stewards {
+  id                String            @id @db.Uuid
+  hotelId           String            @db.Uuid
+  name              String            @db.VarChar(100)
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  restaurant_orders RestaurantOrder[]
+  hotels            Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
-model HotelSteward {
-  id        String   @id @default(uuid()) @db.Uuid
-  hotelId   String   @db.Uuid
-  name      String   @db.VarChar(100)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  hotel     Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-
+  @@unique([hotelId, name])
   @@index([hotelId])
-  @@map("hotel_stewards")
 }
 
 enum UserRole {
