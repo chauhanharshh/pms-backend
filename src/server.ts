@@ -40,7 +40,10 @@ app.use(helmet());
 const allowedOrigins = config.cors.origin.split(',').map((o: string) => o.trim());
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // 1. Allow if CORS_ORIGIN is '*'
+    // 2. Allow if no origin (Electron desktop app sends no origin)
+    // 3. Allow if origin is in the explicitly allowed list
+    if (allowedOrigins.includes('*') || !origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -142,6 +145,16 @@ process.on('SIGTERM', () => {
 process.on('SIGINT', () => {
   logger.info('SIGINT received, shutting down gracefully');
   process.exit(0);
+});
+
+// Handle uncaught exceptions and unhandled rejections
+process.on('uncaughtException', (err) => {
+  logger.fatal(err, '❌ Uncaught Exception');
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error({ promise, reason }, '❌ Unhandled Rejection');
 });
 
 startServer();

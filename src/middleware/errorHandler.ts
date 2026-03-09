@@ -15,9 +15,12 @@ export const errorHandler = (
     req: {
       method: req.method,
       url: req.url,
-      headers: req.headers,
+      params: req.params,
+      query: req.query,
+      // Avoid logging full sensitive headers if necessary, but keep basic info
+      userAgent: req.headers['user-agent'],
     },
-  });
+  }, err.message || 'Unhandled error');
 
   // Zod validation errors
   if (err instanceof ZodError) {
