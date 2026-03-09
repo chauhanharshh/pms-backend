@@ -13,7 +13,7 @@
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
     "backup": "node scripts/backup.js",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate && prisma migrate deploy"
   },
   "keywords": [
     "pms",
