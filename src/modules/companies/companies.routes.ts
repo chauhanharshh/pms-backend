@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { CompaniesController } from './companies.controller';
 import { authenticate } from '../../middleware/authenticate';
 
+import { tenantIsolation } from '../../middleware/tenantIsolation';
 const router = Router();
 const companiesController = new CompaniesController();
 
-router.use(authenticate);
+router.use(authenticate, tenantIsolation);
 
 router.get('/', companiesController.getCompanies.bind(companiesController));
 router.get('/:id', companiesController.getCompanyById.bind(companiesController));

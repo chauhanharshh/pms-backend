@@ -14,8 +14,8 @@ router.use(authenticate);
 router.get('/', tenantIsolation, hotelsController.getAllHotels.bind(hotelsController));
 
 // Get dashboard stats
-router.get('/stats', hotelsController.getStats.bind(hotelsController));
-router.get('/:id/stats', hotelsController.getStats.bind(hotelsController));
+router.get('/stats', tenantIsolation, hotelsController.getStats.bind(hotelsController));
+router.get('/:id/stats', tenantIsolation, hotelsController.getStats.bind(hotelsController));
 
 // Get hotel by ID
 router.get('/:id', hotelsController.getHotelById.bind(hotelsController));

@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { AdvancesController } from './advances.controller';
 import { authenticate } from '../../middleware/authenticate';
 
+import { tenantIsolation } from '../../middleware/tenantIsolation';
 const router = Router();
 const advancesController = new AdvancesController();
 
-router.use(authenticate);
+router.use(authenticate, tenantIsolation);
 
 router.get('/', advancesController.getAdvances.bind(advancesController));
 router.post('/', advancesController.createAdvance.bind(advancesController));

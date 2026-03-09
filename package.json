@@ -12,7 +12,8 @@
     "prisma:migrate:prod": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
-    "backup": "node scripts/backup.js"
+    "backup": "node scripts/backup.js",
+    "postinstall": "prisma generate"
   },
   "keywords": [
     "pms",
@@ -21,6 +22,10 @@
   ],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "bcrypt": "^5.1.1",

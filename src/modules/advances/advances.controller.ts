@@ -7,8 +7,7 @@ const advancesService = new AdvancesService();
 export class AdvancesController {
     async getAdvances(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
-            const advances = await advancesService.getAdvancesByHotel(hotelId, req.query.status as string);
+            const advances = await advancesService.getAdvancesByHotel(req.hotelId as string, req.query.status as string);
             res.json({ status: 'success', data: advances });
         } catch (e) { next(e); }
     }

@@ -97,7 +97,7 @@ export class HotelsController {
 
   async getStats(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const hotelId = req.params.id || req.query.hotelId as string;
+      const hotelId = req.params.id || req.hotelId;
       const stats = await hotelsService.getDashboardStats(hotelId);
       return ResponseHandler.success(res, stats);
     } catch (error) {

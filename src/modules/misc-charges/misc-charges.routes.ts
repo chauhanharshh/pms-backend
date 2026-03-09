@@ -2,10 +2,11 @@ import { Router } from 'express';
 import { MiscChargesController } from './misc-charges.controller';
 import { authenticate } from '../../middleware/authenticate';
 
+import { tenantIsolation } from '../../middleware/tenantIsolation';
 const router = Router();
 const miscChargesController = new MiscChargesController();
 
-router.use(authenticate);
+router.use(authenticate, tenantIsolation);
 
 router.get('/', miscChargesController.getMiscCharges.bind(miscChargesController));
 router.post('/', miscChargesController.createMiscCharge.bind(miscChargesController));

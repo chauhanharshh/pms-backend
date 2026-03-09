@@ -121,8 +121,9 @@ const startServer = async () => {
   }
 
   try {
-    app.listen(config.port, config.host, () => {
-      logger.info(`🚀 Server running on http://${config.host}:${config.port}`);
+    const PORT = Number(process.env.PORT) || 3000;
+    app.listen(PORT, '0.0.0.0', () => {
+      logger.info(`🚀 Server running on port ${PORT}`);
       logger.info(`📝 Environment: ${config.env}`);
       logger.info(`🏨 Multi-Hotel PMS Backend ready`);
     });
