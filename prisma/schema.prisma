@@ -53,7 +53,7 @@ model Hotel {
   roomBlocks           RoomBlock[]
   roomTypes            RoomType[]
   rooms                Room[]
-  stewards             stewards[]
+  stewards             HotelSteward[]
   users                User[]
   vendors              Vendor[]
 
@@ -527,7 +527,7 @@ model RestaurantOrder {
   booking       Booking?                 @relation(fields: [bookingId], references: [id])
   hotel         Hotel                    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   room          Room?                    @relation(fields: [roomId], references: [id])
-  stewards      stewards?                @relation(fields: [stewardId], references: [id])
+  stewards      HotelSteward?                @relation(fields: [stewardId], references: [id])
 
   @@unique([hotelId, orderNumber])
   @@index([hotelId])
@@ -591,18 +591,19 @@ model DayClosing {
   @@map("day_closings")
 }
 
-model stewards {
-  id                String            @id @db.Uuid
+model HotelSteward {
+  id                String            @id @db.Uuid @default(uuid())
   hotelId           String            @db.Uuid
   name              String            @db.VarChar(100)
   isActive          Boolean           @default(true)
   createdAt         DateTime          @default(now())
-  updatedAt         DateTime
+  updatedAt         DateTime          @updatedAt
   restaurant_orders RestaurantOrder[]
-  hotels            Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  hotel             Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
   @@unique([hotelId, name])
   @@index([hotelId])
+  @@map("stewards")
 }
 
 enum UserRole {

@@ -168,6 +168,7 @@ export class RestaurantService {
                     tableNumber: data.tableNumber,
                     guestName: data.guestName,
                     stewardName: data.stewardName,
+                    stewardId: data.stewardId || null,
                     subtotal, discount, gst, serviceCharge, totalAmount,
                     paymentMethod: data.paymentMethod || null,
                     status: data.status || 'pending',
@@ -224,6 +225,7 @@ export class RestaurantService {
                         tableNumber: data.tableNumber !== undefined ? data.tableNumber : order.tableNumber,
                         guestName: data.guestName !== undefined ? data.guestName : order.guestName,
                         stewardName: data.stewardName !== undefined ? data.stewardName : order.stewardName,
+                        stewardId: data.stewardId !== undefined ? data.stewardId : order.stewardId,
                         subtotal, discount, gst, serviceCharge, totalAmount,
                         status: data.status || order.status,
                         paymentMethod: data.paymentMethod || order.paymentMethod,
@@ -507,6 +509,47 @@ export class RestaurantService {
                     updatedBy: userId
                 } as any
             });
+
+            // Update room bill if attached to a booking
+            if ((order as any).bookingId) {
+                const billedOrders = await (tx.restaurantOrder as any).findMany({
+                    where: {
+                        bookingId: (order as any).bookingId,
+                        status: 'billed',
+                        isDeleted: false
+                    }
+                });
+
+                const totalRestaurantCharges = billedOrders.reduce(
+                    (sum: Decimal, o: any) => sum.plus(new Decimal(o.totalAmount || 0)),
+                    new Decimal(0)
+                );
+
+                const bill = await (tx.bill as any).findFirst({
+                    where: { bookingId: (order as any).bookingId, isDeleted: false }
+                });
+
+                if (bill) {
+                    const subtotal = new Decimal(bill.roomCharges || 0)
+                        .plus(totalRestaurantCharges)
+                        .plus(new Decimal(bill.miscCharges || 0));
+
+                    const taxAmount = subtotal.minus(new Decimal(bill.discount || 0)).mul(0.12); // Assuming 12% GST for rooms
+                    const totalAmount = subtotal.minus(new Decimal(bill.discount || 0)).plus(taxAmount);
+
+                    await (tx.bill as any).update({
+                        where: { id: (bill as any).id },
+                        data: {
+                            restaurantCharges: totalRestaurantCharges,
+                            subtotal,
+                            taxAmount,
+                            totalAmount,
+                            balanceDue: totalAmount.minus(new Decimal(bill.paidAmount || 0)),
+                            updatedBy: userId
+                        }
+                    });
+                }
+            }
 
             return invoice;
         });
