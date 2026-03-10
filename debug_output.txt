@@ -1,0 +1,15 @@
+﻿Users and their Hotel IDs:
+  admin (admin): null
+  suvidha (hotel_manager): 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  legrace (hotel_manager): 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  rayban (hotel_manager): ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  kingplaza (hotel_manager): b2463cc8-31d5-42f4-b115-b2ce69c4ce75
+Hotels in DB:
+  3a842b9e-7cc0-4157-9c97-9c3526a10df4 (LeGrace)
+  ae5392a9-9bd2-42f7-a1ea-38022d1f218c (RayBan)
+  b2463cc8-31d5-42f4-b115-b2ce69c4ce75 (king plaza)
+  3c332e23-e7ff-4aff-8ae3-3771ee4dc46e (Suvidha Deluxe)
+Menu Items per Hotel ID:
+  Hotel 3a842b9e-7cc0-4157-9c97-9c3526a10df4: 149 items
+  Hotel 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e: 149 items
+  Hotel ae5392a9-9bd2-42f7-a1ea-38022d1f218c: 149 items

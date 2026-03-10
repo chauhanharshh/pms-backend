@@ -1,0 +1,60 @@
+﻿Categories in DB:
+  Good Morning: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Breakfast: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Special: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Snacks: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Chinese Flavours: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Khusboo: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Tawa Se: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Staple: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Main Course: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Combo: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Salad: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Sweetness: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Raita Relish: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Cool Temptation: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Refresh: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Water: ae5392a9-9bd2-42f7-a1ea-38022d1f218c
+  Good Morning: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Breakfast: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Special: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Snacks: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Chinese Flavours: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Khusboo: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Tawa Se: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Staple: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Main Course: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Combo: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Salad: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Sweetness: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Raita Relish: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Cool Temptation: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Refresh: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Water: 3c332e23-e7ff-4aff-8ae3-3771ee4dc46e
+  Breakfast: b2463cc8-31d5-42f4-b115-b2ce69c4ce75
+  Main Course: b2463cc8-31d5-42f4-b115-b2ce69c4ce75
+  Beverages: b2463cc8-31d5-42f4-b115-b2ce69c4ce75
+  Desserts: b2463cc8-31d5-42f4-b115-b2ce69c4ce75
+  Good Morning: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Breakfast: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Special: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Snacks: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Chinese Flavours: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Khusboo: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Tawa Se: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Staple: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Main Course: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Combo: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Salad: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Sweetness: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Raita Relish: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Cool Temptation: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Refresh: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+  Water: 3a842b9e-7cc0-4157-9c97-9c3526a10df4
+
+Sample Menu Items:
+  Mineral Water (1 Ltr.): hotelId=3c332e23-e7ff-4aff-8ae3-3771ee4dc46e, categoryId=efcdbd39-3727-45c7-b07e-45c0883f0742
+  Papad Roll: hotelId=3a842b9e-7cc0-4157-9c97-9c3526a10df4, categoryId=43175dbb-dfa1-438a-8750-a8df396f76ed
+  Soda (500 ml.): hotelId=3a842b9e-7cc0-4157-9c97-9c3526a10df4, categoryId=e953f85c-02f0-44b8-8799-692e69bda678
+  1 Pc. Puri: hotelId=3c332e23-e7ff-4aff-8ae3-3771ee4dc46e, categoryId=e0fbc0f9-613a-4e2a-a952-21a83699c11b
+  Jal Jeera: hotelId=3a842b9e-7cc0-4157-9c97-9c3526a10df4, categoryId=e953f85c-02f0-44b8-8799-692e69bda678
