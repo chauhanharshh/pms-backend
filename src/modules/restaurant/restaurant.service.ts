@@ -92,7 +92,6 @@ export class RestaurantService {
             include: {
                 orderItems: { include: { menuItem: true } },
                 booking: { select: { id: true, guestName: true, room: { select: { roomNumber: true } } } },
-                invoice: true,
             },
             orderBy: { createdAt: 'desc' },
         });

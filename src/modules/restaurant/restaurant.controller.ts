@@ -114,9 +114,8 @@ export class RestaurantController {
             }
             const orders = (await restaurantService.getOrders(hotelId, req.query.status as string, req.query.bookingId as string)) || [];
             res.json({ status: 'success', data: orders });
-        } catch (error: any) {
-            console.error("Restaurant orders fetching error:", error);
-            res.status(500).json({ status: 'error', message: error.message, stack: error.stack });
+        } catch (e) {
+            next(e);
         }
     }
 
