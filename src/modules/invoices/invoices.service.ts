@@ -6,19 +6,32 @@ import { calculateRoomTax } from '../../utils/tax';
 
 export class InvoicesService {
     async getInvoicesByHotel(hotelId: string, status?: string) {
+        console.log(`Fetching invoices for hotelId: ${hotelId}, status: ${status}`);
         const where: any = { hotelId, isDeleted: false };
         if (status) where.status = status;
-        return prisma.invoice.findMany({
-            where,
-            include: {
-                bill: {
-                    include: {
-                        booking: { select: { guestName: true, guestPhone: true, checkInDate: true, checkOutDate: true } },
+        try {
+            const invoices = await prisma.invoice.findMany({
+                where,
+                include: {
+                    bill: {
+                        include: {
+                            booking: { select: { guestName: true, guestPhone: true, checkInDate: true, checkOutDate: true } },
+                        },
                     },
+                    restaurantOrder: {
+                        include: {
+                            booking: { select: { guestName: true } }
+                        }
+                    }
                 },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+                orderBy: { createdAt: 'desc' },
+            });
+            console.log(`Found ${invoices.length} invoices`);
+            return invoices;
+        } catch (error: any) {
+            console.error("Error in getInvoicesByHotel:", error);
+            throw error;
+        }
     }
 
     async getInvoiceById(invoiceId: string, hotelId: string) {
@@ -50,18 +63,30 @@ export class InvoicesService {
     }
 
     async generateInvoice(data: { billId: string; guestAddress?: string }, hotelId: string, userId: string) {
+        console.log(`Generating invoice for billId: ${data.billId}, hotelId: ${hotelId}`);
         const bill = await prisma.bill.findFirst({
             where: { id: data.billId, hotelId },
             include: { booking: true, invoice: true }
         });
 
-        if (!bill) throw new NotFoundError('Bill not found');
-        if (bill.invoice) throw new BadRequestError('Invoice already exists for this bill');
-        if (!bill.booking) throw new BadRequestError('Booking not associated with this bill');
+        if (!bill) {
+            console.error(`Bill not found: ${data.billId}`);
+            throw new NotFoundError('Bill not found');
+        }
+        if (bill.invoice) {
+            console.error(`Invoice already exists for bill: ${data.billId}`);
+            throw new BadRequestError('Invoice already exists for this bill');
+        }
+        if (!bill.booking) {
+            console.error(`Booking not found for bill: ${data.billId}`);
+            throw new BadRequestError('Booking not associated with this bill');
+        }
 
         return prisma.$transaction(async (tx) => {
+            console.log("Starting transaction for invoice generation...");
             // If address provided, update booking
             if (data.guestAddress && data.guestAddress.trim() !== '') {
+                console.log(`Updating guest address for booking: ${bill.bookingId}`);
                 await tx.booking.update({
                     where: { id: bill.bookingId },
                     data: { addressLine: data.guestAddress }
@@ -83,7 +108,7 @@ export class InvoicesService {
                 startOfDay.setHours(0, 0, 0, 0);
 
                 let resInvoiceCount = await tx.invoice.count({
-                    where: { hotelId, type: 'RESTAURANT', createdAt: { gte: startOfDay } }
+                    where: { hotelId: bill.hotelId, type: 'RESTAURANT', createdAt: { gte: startOfDay } }
                 });
 
                 for (const order of pendingOrders) {
@@ -91,7 +116,7 @@ export class InvoicesService {
 
                     await tx.invoice.create({
                         data: {
-                            hotelId,
+                            hotelId: bill.hotelId,
                             restaurantOrderId: order.id,
                             invoiceNumber: resInvoiceNumber,
                             subtotal: order.subtotal,
@@ -122,25 +147,40 @@ export class InvoicesService {
             }
 
             // Recalculate totals
-            const hotel = await tx.hotel.findUnique({ where: { id: hotelId } });
+            console.log("Recalculating bill totals...");
+            const hotel = await tx.hotel.findUnique({ where: { id: bill.hotelId } });
 
             const allOrders = await tx.restaurantOrder.findMany({
                 where: { bookingId: bill.bookingId, status: 'billed' }
             });
-            const totalRestaurantCharges = allOrders.reduce((sum: any, o: any) => sum.add(o.totalAmount), new Decimal(0));
+            console.log(`Found ${allOrders.length} billed restaurant orders`);
+            const totalRestaurantCharges = allOrders.reduce((sum: Decimal, o: any) => {
+                const amt = new Decimal(o.totalAmount?.toString() || '0');
+                console.log(`Adding order amount: ${amt}`);
+                return sum.add(amt);
+            }, new Decimal(0));
 
             const miscChargesList = await tx.miscCharge.findMany({
                 where: { bookingId: bill.bookingId, isDeleted: false }
             });
-            const totalMisc = miscChargesList.reduce((sum: any, m: any) => sum.add(m.amount.mul(m.quantity)), new Decimal(0));
+            console.log(`Found ${miscChargesList.length} misc charges`);
+            const totalMisc = miscChargesList.reduce((sum: Decimal, m: any) => {
+                const amt = new Decimal(m.amount?.toString() || '0');
+                const qty = new Decimal(m.quantity?.toString() || '1');
+                const itemTotal = amt.mul(qty);
+                console.log(`Adding misc charge: ${itemTotal}`);
+                return sum.add(itemTotal);
+            }, new Decimal(0));
 
-            const roomCharges = new Decimal(bill.roomCharges.toString());
+            const roomCharges = new Decimal(bill.roomCharges?.toString() || '0');
+            console.log(`Room charges: ${roomCharges}`);
             const subtotal = roomCharges.add(totalRestaurantCharges).add(totalMisc);
+            console.log(`New subtotal: ${subtotal}`);
 
             // GST ONLY ON ROOM RENT using new rules
-            const nights = Math.max(1, Math.ceil(
-                (new Date(bill.booking.checkOutDate).getTime() - new Date(bill.booking.checkInDate).getTime()) / 86400000
-            ));
+            const checkIn = new Date(bill.booking.checkInDate);
+            const checkOut = new Date(bill.booking.checkOutDate);
+            const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / 86400000));
             const dailyRent = roomCharges.div(nights);
             const taxInfo = calculateRoomTax(dailyRent, nights);
 
@@ -148,7 +188,8 @@ export class InvoicesService {
             const sgstAmount = taxInfo.sgstAmount;
             const totalTax = taxInfo.amount;
 
-            const totalAmount = subtotal.add(totalTax);
+            const discountAmount = new Decimal(bill.discount?.toString() || '0');
+            const totalAmount = subtotal.sub(discountAmount).add(totalTax);
 
             // Update Bill with correct calculated amounts
             await tx.bill.update({
@@ -171,7 +212,7 @@ export class InvoicesService {
 
             const count = await tx.invoice.count({
                 where: {
-                    hotelId,
+                    hotelId: bill.hotelId,
                     createdAt: { gte: startOfDay }
                 }
             });
@@ -180,7 +221,7 @@ export class InvoicesService {
             // Create Invoice
             const invoice = await tx.invoice.create({
                 data: {
-                    hotelId,
+                    hotelId: bill.hotelId,
                     billId: bill.id,
                     invoiceNumber,
                     subtotal,
@@ -231,7 +272,7 @@ export class InvoicesService {
             // Log Payment
             await tx.advancePayment.create({
                 data: {
-                    hotelId,
+                    hotelId: invoice.hotelId,
                     bookingId: bill.bookingId,
                     guestName: bill.booking.guestName,
                     amount: balanceDue,

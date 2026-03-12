@@ -30,7 +30,10 @@ export class InvoicesController {
         try {
             const invoice = await invoicesService.generateInvoice(req.body, req.hotelId as string, req.user!.userId);
             res.status(201).json({ status: 'success', data: invoice });
-        } catch (e) { next(e); }
+        } catch (error: any) {
+            console.error("Invoice generation error:", error);
+            res.status(500).json({ status: 'error', message: error.message, stack: error.stack });
+        }
     }
 
     async payInvoice(req: AuthRequest, res: Response, next: NextFunction) {

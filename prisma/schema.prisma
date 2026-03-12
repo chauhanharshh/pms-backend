@@ -35,6 +35,7 @@ model Hotel {
   rating               Int?                 @default(0)
   totalRooms           Int?                 @default(0)
   posBossMode          Boolean              @default(false)
+  showAllRooms         Boolean              @default(false)
   advancePayments      AdvancePayment[]
   bills                Bill[]
   bookings             Booking[]
@@ -266,6 +267,8 @@ model Booking {
   createdBy        String?           @db.Uuid
   updatedBy        String?           @db.Uuid
   companyId        String?           @db.Uuid
+  companyName      String?           @db.VarChar(255)
+  companyGst       String?           @db.VarChar(50)
   businessSource   String?           @db.VarChar(100)
   comingFrom       String?           @db.VarChar(255)
   goingTo          String?           @db.VarChar(255)

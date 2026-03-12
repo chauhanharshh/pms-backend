@@ -67,6 +67,8 @@ export class BookingsService {
       totalAmount,
       advanceAmount,
       companyId,
+      companyName,
+      companyGst,
       comingFrom,
       goingTo,
       purposeOfVisit,
@@ -99,6 +101,8 @@ export class BookingsService {
         createdBy: userId,
         updatedBy: userId,
         companyId: companyId || undefined,
+        companyName: companyName || undefined,
+        companyGst: companyGst || undefined,
         comingFrom,
         goingTo,
         purposeOfVisit: purposeOfVisit || "Tourism",
@@ -133,6 +137,8 @@ export class BookingsService {
     paymentMode: string;
     specialRequests?: string;
     companyId?: string;
+    companyName?: string;
+    companyGst?: string;
     roomRate: number;
     taxAmount: number;
     comingFrom?: string;
@@ -143,6 +149,7 @@ export class BookingsService {
     vehicleDetails?: string;
     remarks?: string;
   }, hotelId: string, userId: string) {
+    console.log("walkInCheckIn payload received:", data);
     const room = await prisma.room.findFirst({ where: { id: data.roomId, hotelId } });
     if (!room) throw new NotFoundError('Room not found');
     if (room.status !== 'vacant') throw new BadRequestError('Room is not vacant');
@@ -167,6 +174,8 @@ export class BookingsService {
           hotelId,
           roomId: data.roomId,
           companyId: data.companyId || undefined,
+          companyName: data.companyName || undefined,
+          companyGst: data.companyGst || undefined,
           guestName: data.guestName,
           guestPhone: data.guestPhone,
           guestEmail: data.guestEmail,

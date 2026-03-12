@@ -1,0 +1,40 @@
+﻿Found bill without invoice: 5786cccf-3d1b-46ab-89a1-22ba36b03fc5
+node.exe : Crash 
+during 
+generateInvoice: 
+AppError: Bill not 
+found
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Users\Harsh 
+Chauhan\AppData\ ...
++ ~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
+~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (Crash during    
+ ge... Bill not fou    
+nd:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+    at new 
+NotFoundError (H:\4ubil
+ling\pms\backend\src\ut
+ils\errors.ts:33:5)
+    at InvoicesService.
+generateInvoice (H:\4ub
+illing\pms\backend\src\
+modules\invoices\invoic
+es.service.ts:58:26)
+    at async run (H:\4u
+billing\pms\backend\deb
+ug_invoice.ts:25:24) {
+  statusCode: 404,
+  isOperational: true
+}

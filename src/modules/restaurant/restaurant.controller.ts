@@ -109,9 +109,15 @@ export class RestaurantController {
     async getOrders(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            const orders = await restaurantService.getOrders(hotelId, req.query.status as string, req.query.bookingId as string);
+            if (!hotelId) {
+                return res.json({ status: 'success', data: [] });
+            }
+            const orders = (await restaurantService.getOrders(hotelId, req.query.status as string, req.query.bookingId as string)) || [];
             res.json({ status: 'success', data: orders });
-        } catch (e) { next(e); }
+        } catch (error: any) {
+            console.error("Restaurant orders fetching error:", error);
+            res.status(500).json({ status: 'error', message: error.message, stack: error.stack });
+        }
     }
 
     async createOrder(req: AuthRequest, res: Response, next: NextFunction) {

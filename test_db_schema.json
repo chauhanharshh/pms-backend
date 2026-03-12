@@ -1,0 +1,107 @@
+[
+  {
+    "column_name": "type",
+    "data_type": "USER-DEFINED",
+    "column_default": "'ROOM'::\"InvoiceType\""
+  },
+  {
+    "column_name": "hotelId",
+    "data_type": "uuid",
+    "column_default": null
+  },
+  {
+    "column_name": "billId",
+    "data_type": "uuid",
+    "column_default": null
+  },
+  {
+    "column_name": "restaurantOrderId",
+    "data_type": "uuid",
+    "column_default": null
+  },
+  {
+    "column_name": "serviceCharge",
+    "data_type": "numeric",
+    "column_default": "0"
+  },
+  {
+    "column_name": "id",
+    "data_type": "uuid",
+    "column_default": null
+  },
+  {
+    "column_name": "subtotal",
+    "data_type": "numeric",
+    "column_default": null
+  },
+  {
+    "column_name": "cgst",
+    "data_type": "numeric",
+    "column_default": "0"
+  },
+  {
+    "column_name": "sgst",
+    "data_type": "numeric",
+    "column_default": "0"
+  },
+  {
+    "column_name": "igst",
+    "data_type": "numeric",
+    "column_default": "0"
+  },
+  {
+    "column_name": "totalAmount",
+    "data_type": "numeric",
+    "column_default": null
+  },
+  {
+    "column_name": "status",
+    "data_type": "USER-DEFINED",
+    "column_default": "'issued'::\"InvoiceStatus\""
+  },
+  {
+    "column_name": "invoiceDate",
+    "data_type": "timestamp without time zone",
+    "column_default": "CURRENT_TIMESTAMP"
+  },
+  {
+    "column_name": "isDeleted",
+    "data_type": "boolean",
+    "column_default": "false"
+  },
+  {
+    "column_name": "createdAt",
+    "data_type": "timestamp without time zone",
+    "column_default": "CURRENT_TIMESTAMP"
+  },
+  {
+    "column_name": "updatedAt",
+    "data_type": "timestamp without time zone",
+    "column_default": null
+  },
+  {
+    "column_name": "createdBy",
+    "data_type": "uuid",
+    "column_default": null
+  },
+  {
+    "column_name": "updatedBy",
+    "data_type": "uuid",
+    "column_default": null
+  },
+  {
+    "column_name": "invoiceNumber",
+    "data_type": "character varying",
+    "column_default": null
+  },
+  {
+    "column_name": "paymentMethod",
+    "data_type": "character varying",
+    "column_default": null
+  },
+  {
+    "column_name": "source",
+    "data_type": "character varying",
+    "column_default": null
+  }
+]

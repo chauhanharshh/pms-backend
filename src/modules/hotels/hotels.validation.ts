@@ -22,6 +22,7 @@ export const createHotelSchema = z.object({
   accentColor: z.string().optional().nullable(),
   isCustomTheme: z.boolean().optional(),
   posBossMode: z.boolean().optional(),
+  showAllRooms: z.boolean().optional(),
 });
 
 export const updateHotelSchema = createHotelSchema.partial();

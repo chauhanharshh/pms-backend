@@ -84,8 +84,8 @@ export class RestaurantService {
     // ── ORDERS ──
     async getOrders(hotelId?: string, status?: string, bookingId?: string) {
         const where: any = { isDeleted: false };
-        if (hotelId) where.hotelId = hotelId;
-        if (status) where.status = status;
+        if (hotelId && hotelId !== 'all') where.hotelId = hotelId;
+        if (status && status !== 'all') where.status = status;
         if (bookingId) where.bookingId = bookingId;
         return prisma.restaurantOrder.findMany({
             where,
@@ -342,20 +342,27 @@ export class RestaurantService {
                         where: { bookingId: order.bookingId, status: 'billed' }
                     });
                     const restaurantTotal = allBilledOrders.reduce(
-                        (sum: Decimal, o: any) => sum.add(o.totalAmount), new Decimal(0)
+                        (sum: Decimal, o: any) => {
+                            const amt = new Decimal(o.totalAmount?.toString() || '0');
+                            return sum.add(amt);
+                        }, new Decimal(0)
                     );
 
                     const miscCharges = await tx.miscCharge.findMany({
                         where: { bookingId: order.bookingId, isDeleted: false }
                     });
                     const miscTotal = miscCharges.reduce(
-                        (sum: Decimal, m: any) => sum.add(m.amount.mul(m.quantity)), new Decimal(0)
+                        (sum: Decimal, m: any) => {
+                            const amt = new Decimal(m.amount?.toString() || '0');
+                            const qty = new Decimal(m.quantity?.toString() || '1');
+                            return sum.add(amt.mul(qty));
+                        }, new Decimal(0)
                     );
 
                     // Recalculate bill totals
-                    const roomCharges = new Decimal(bill.roomCharges.toString());
+                    const roomCharges = new Decimal(bill.roomCharges?.toString() || '0');
                     const subtotal = roomCharges.add(restaurantTotal).add(miscTotal);
-                    const discount = new Decimal(bill.discount.toString());
+                    const discount = new Decimal(bill.discount?.toString() || '0');
                     const netSubtotal = subtotal.sub(discount);
 
                     // Recalculate Tax (Room Rent based)
