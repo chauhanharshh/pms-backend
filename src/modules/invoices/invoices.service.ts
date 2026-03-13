@@ -218,32 +218,42 @@ export class InvoicesService {
             });
             const invoiceNumber = `INV-${dateStr}-${(count + 1).toString().padStart(4, '0')}`;
 
+            const invoiceData = {
+                hotelId: bill.hotelId,
+                billId: bill.id,
+                invoiceNumber,
+                subtotal,
+                cgst: cgstAmount,
+                sgst: sgstAmount,
+                totalAmount,
+                status: (totalAmount.sub(bill.paidAmount)).lte(0) ? InvoiceStatus.paid : InvoiceStatus.issued,
+                createdBy: userId,
+                updatedBy: userId
+            };
+            console.log("Creating Invoice with data:", JSON.stringify(invoiceData, null, 2));
+
             // Create Invoice
-            const invoice = await tx.invoice.create({
-                data: {
-                    hotelId: bill.hotelId,
-                    billId: bill.id,
-                    invoiceNumber,
-                    subtotal,
-                    cgst: cgstAmount,
-                    sgst: sgstAmount,
-                    totalAmount,
-                    status: (totalAmount.sub(bill.paidAmount)).lte(0) ? InvoiceStatus.paid : InvoiceStatus.issued,
-                    createdBy: userId,
-                    updatedBy: userId
-                },
-                include: {
-                    bill: {
-                        include: {
-                            booking: {
-                                include: { room: { include: { roomType: true } } }
+            try {
+                const invoice = await tx.invoice.create({
+                    data: invoiceData,
+                    include: {
+                        bill: {
+                            include: {
+                                booking: {
+                                    include: { room: { include: { roomType: true } } }
+                                }
                             }
                         }
                     }
-                }
-            });
-
-            return invoice;
+                });
+                return invoice;
+            } catch (error: any) {
+                console.error("CRITICAL ERROR during tx.invoice.create:");
+                console.error("Error Message:", error.message);
+                if (error.code) console.error("Prisma Error Code:", error.code);
+                if (error.meta) console.error("Prisma Error Meta:", JSON.stringify(error.meta, null, 2));
+                throw error;
+            }
         });
     }
 

@@ -35,7 +35,8 @@ async function main() {
                 data: {
                     hotelId: hotel.id,
                     username: "test_admin_" + Date.now(),
-                    password: "password123", // In a real app this would be hashed
+                    passwordHash: "password123", // In a real app this would be hashed
+                    fullName: "Test Admin",
                     role: 'admin',
                     email: "admin@test.com"
                 } as any
@@ -61,8 +62,11 @@ async function main() {
                 data: {
                     hotelId: hotel.id,
                     roomNumber: "101-Test",
-                    roomTypeId: roomType.id,
-                    status: 'available'
+                    floor: 1,
+                    typeId: roomType.id,
+                    status: 'vacant',
+                    basePrice: roomType.basePrice,
+                    maxOccupancy: roomType.maxOccupancy
                 }
             });
         }
@@ -107,7 +111,11 @@ async function main() {
         });
 
         // 6. Generate Invoice
-        console.log("Attempting to generate invoice...");
+        console.log("Attempting to generate invoice with data:", {
+            billId: bill.id,
+            hotelId: hotel.id,
+            adminId: admin.id
+        });
         const invoice = await invoicesService.generateInvoice(
             { billId: bill.id, guestAddress: "123 Automation St, Test City" },
             hotel.id,
