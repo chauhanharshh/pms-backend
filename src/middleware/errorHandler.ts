@@ -48,10 +48,11 @@ export const errorHandler = (
     }
   }
 
-  // Custom application errors
-  if (err instanceof AppError) {
-    return res.status(err.statusCode).json({
-      status: err.statusCode < 500 ? 'fail' : 'error',
+  // Custom application errors (using property check for better reliability)
+  const anyErr = err as any;
+  if (anyErr.statusCode && typeof anyErr.statusCode === 'number') {
+    return res.status(anyErr.statusCode).json({
+      status: anyErr.statusCode < 500 ? 'fail' : 'error',
       message: err.message,
     });
   }
@@ -59,6 +60,8 @@ export const errorHandler = (
   // Default server error
   return res.status(500).json({
     status: 'error',
-    message: 'Internal server error',
+    message: err.message || 'Internal server error',
+    error: process.env.NODE_ENV === 'production' ? undefined : err,
+    stack: process.env.NODE_ENV === 'production' ? undefined : err.stack,
   });
 };

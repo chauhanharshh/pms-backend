@@ -7,31 +7,41 @@ import bcrypt from 'bcrypt';
 
 export class HotelsService {
   async getAllHotels(userId: string, role: string, hotelId?: string) {
-    if (role === 'admin') {
-      return prisma.hotel.findMany({
-        where: hotelId ? { id: hotelId } : {},
-        orderBy: { name: 'asc' },
+    try {
+      if (role === 'admin') {
+        return prisma.hotel.findMany({
+          where: hotelId ? { id: hotelId } : {},
+          orderBy: { name: 'asc' },
+        });
+      }
+
+      if (!hotelId) {
+        throw new ForbiddenError('Hotel user must have assigned hotel');
+      }
+
+      const assignedHotel = await prisma.hotel.findUnique({
+        where: { id: hotelId },
       });
+
+      if (!assignedHotel) return [];
+
+      // If POS Boss Mode is enabled for this hotel, allow seeing all hotels
+      if ((assignedHotel as any).posBossMode) {
+        return prisma.hotel.findMany({
+          orderBy: { name: 'asc' },
+        });
+      }
+
+      return [assignedHotel];
+    } catch (error) {
+      if (error instanceof ForbiddenError) throw error;
+      if (typeof logger !== 'undefined' && logger.error) {
+        logger.error('Error fetching hotels:', error);
+      } else {
+        console.error('Error fetching hotels (no logger):', error);
+      }
+      return []; // Return empty array on failure to prevent crash
     }
-
-    if (!hotelId) {
-      throw new ForbiddenError('Hotel user must have assigned hotel');
-    }
-
-    const assignedHotel = await prisma.hotel.findUnique({
-      where: { id: hotelId },
-    });
-
-    if (!assignedHotel) return [];
-
-    // If POS Boss Mode is enabled for this hotel, allow seeing all hotels
-    if ((assignedHotel as any).posBossMode) {
-      return prisma.hotel.findMany({
-        orderBy: { name: 'asc' },
-      });
-    }
-
-    return [assignedHotel];
   }
 
   async getHotelById(hotelId: string) {
