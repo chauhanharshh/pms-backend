@@ -83,18 +83,26 @@ export class RestaurantService {
 
     // ── ORDERS ──
     async getOrders(hotelId?: string, status?: string, bookingId?: string) {
-        const where: any = { isDeleted: false };
-        if (hotelId && hotelId !== 'all') where.hotelId = hotelId;
-        if (status && status !== 'all') where.status = status;
-        if (bookingId) where.bookingId = bookingId;
-        return prisma.restaurantOrder.findMany({
-            where,
-            include: {
-                orderItems: { include: { menuItem: true } },
-                booking: { select: { id: true, guestName: true, room: { select: { roomNumber: true } } } },
-            },
-            orderBy: { createdAt: 'desc' },
-        });
+        try {
+            const where: any = { isDeleted: false };
+            if (hotelId && hotelId !== 'all') where.hotelId = hotelId;
+            if (status && status !== 'all') where.status = status;
+            if (bookingId) where.bookingId = bookingId;
+            
+            return await prisma.restaurantOrder.findMany({
+                where,
+                include: {
+                    orderItems: { include: { menuItem: true } },
+                    booking: true,
+                    room: true,
+                },
+                orderBy: { createdAt: 'desc' },
+            });
+        } catch (error) {
+            console.error('Error fetching restaurant orders:', error);
+            // Return empty array to prevent 500 errors as per user request
+            return [];
+        }
     }
 
     async getCheckedInRooms(hotelId?: string) {

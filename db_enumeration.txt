@@ -1,4 +1,0 @@
---- Enumerating everything in pms_db ---
-Schemas: public, information_schema, pg_catalog, pg_toast
-
-Tables across all schemas:
