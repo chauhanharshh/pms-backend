@@ -7,7 +7,7 @@ const liabilitiesService = new LiabilitiesService();
 export class LiabilitiesController {
     async getLiabilities(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             const liabilities = await liabilitiesService.getLiabilitiesByHotel(hotelId);
             res.json({ status: 'success', data: liabilities });
         } catch (e) { next(e); }
@@ -39,7 +39,7 @@ export class LiabilitiesController {
 
     async deleteLiability(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             await liabilitiesService.deleteLiability(req.params.id, hotelId);
             res.json({ status: 'success', message: 'Liability deleted' });
         } catch (e) { next(e); }

@@ -1,13 +1,21 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import { GstReportsService } from './gst-reports.service';
+import { AuthRequest } from '../../types';
+import { BadRequestError } from '../../utils/errors';
 
 const gstReportsService = new GstReportsService();
 
 export class GstReportsController {
-    async getSummaryReport(req: Request, res: Response) {
-        const user = (req as any).user;
-        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
-        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+    private resolveHotelId(req: AuthRequest): string {
+        const targetHotelId = req.hotelId || req.user?.hotelId || (req.query.hotelId as string);
+        if (!targetHotelId) {
+            throw new BadRequestError('Hotel context is required for GST reports');
+        }
+        return targetHotelId;
+    }
+
+    async getSummaryReport(req: AuthRequest, res: Response) {
+        const targetHotelId = this.resolveHotelId(req);
         const { startDate, endDate, status } = req.query;
         const result = await gstReportsService.getSummaryReport(
             targetHotelId,
@@ -18,10 +26,8 @@ export class GstReportsController {
         res.status(200).json({ status: 'success', data: result });
     }
 
-    async getRoomGstReport(req: Request, res: Response) {
-        const user = (req as any).user;
-        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
-        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+    async getRoomGstReport(req: AuthRequest, res: Response) {
+        const targetHotelId = this.resolveHotelId(req);
         const { startDate, endDate, status, companyId } = req.query;
         const result = await gstReportsService.getRoomGstReport(
             targetHotelId,
@@ -33,10 +39,8 @@ export class GstReportsController {
         res.status(200).json({ status: 'success', data: result });
     }
 
-    async getRestaurantGstReport(req: Request, res: Response) {
-        const user = (req as any).user;
-        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
-        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+    async getRestaurantGstReport(req: AuthRequest, res: Response) {
+        const targetHotelId = this.resolveHotelId(req);
         const { startDate, endDate, status, companyId } = req.query;
         const result = await gstReportsService.getRestaurantGstReport(
             targetHotelId,
@@ -48,10 +52,8 @@ export class GstReportsController {
         res.status(200).json({ status: 'success', data: result });
     }
 
-    async getMiscGstReport(req: Request, res: Response) {
-        const user = (req as any).user;
-        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
-        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+    async getMiscGstReport(req: AuthRequest, res: Response) {
+        const targetHotelId = this.resolveHotelId(req);
         const { startDate, endDate, status, companyId } = req.query;
         const result = await gstReportsService.getMiscGstReport(
             targetHotelId,
@@ -63,10 +65,8 @@ export class GstReportsController {
         res.status(200).json({ status: 'success', data: result });
     }
 
-    async getInvoiceWiseReport(req: Request, res: Response) {
-        const user = (req as any).user;
-        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
-        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+    async getInvoiceWiseReport(req: AuthRequest, res: Response) {
+        const targetHotelId = this.resolveHotelId(req);
         const { startDate, endDate, status, companyId } = req.query;
         const result = await gstReportsService.getInvoiceWiseReport(
             targetHotelId,
@@ -78,10 +78,8 @@ export class GstReportsController {
         res.status(200).json({ status: 'success', data: result });
     }
 
-    async getSacHsnReport(req: Request, res: Response) {
-        const user = (req as any).user;
-        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
-        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+    async getSacHsnReport(req: AuthRequest, res: Response) {
+        const targetHotelId = this.resolveHotelId(req);
         const { startDate, endDate, status } = req.query;
         const result = await gstReportsService.getSacHsnReport(
             targetHotelId,

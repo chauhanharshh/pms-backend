@@ -8,12 +8,12 @@ import { AuthRequest } from '../../types';
 const router = Router();
 const roomsService = new RoomsService();
 
-router.use(authenticate);
+router.use(authenticate, tenantIsolation);
 
 // Get all rooms by hotel
-router.get('/', tenantIsolation, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const hotelId = req.user?.hotelId || req.query.hotelId as string;
+        const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
         const rooms = await roomsService.getRoomsByHotel(hotelId);
         res.json({ status: 'success', data: rooms });
     } catch (e) { next(e); }
@@ -22,6 +22,9 @@ router.get('/', tenantIsolation, async (req: AuthRequest, res: Response, next: N
 // Create room
 router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
+        if (!req.body.hotelId && req.hotelId) {
+            req.body.hotelId = req.hotelId;
+        }
         const room = await roomsService.createRoom(req.body, req.user!.userId);
         res.status(201).json({ status: 'success', data: room });
     } catch (e) { next(e); }
@@ -30,7 +33,7 @@ router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => 
 // Get room availability
 router.get('/available', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const hotelId = req.user?.hotelId || req.query.hotelId as string;
+        const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
         const { checkInDate, checkOutDate } = req.query;
         const rooms = await roomsService.getAvailableRooms(hotelId, new Date(checkInDate as string), new Date(checkOutDate as string));
         res.json({ status: 'success', data: rooms });
@@ -40,7 +43,7 @@ router.get('/available', async (req: AuthRequest, res: Response, next: NextFunct
 // Get room by ID
 router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const hotelId = req.user?.hotelId;
+        const hotelId = req.hotelId || req.user?.hotelId;
         const room = await roomsService.getRoomById(req.params.id, hotelId);
         res.json({ status: 'success', data: room });
     } catch (e) { next(e); }
@@ -69,7 +72,7 @@ router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 // Delete room
 router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const hotelId = req.user?.hotelId || (req.query.hotelId as string);
+        const hotelId = req.hotelId || req.user?.hotelId || (req.query.hotelId as string);
         await roomsService.deleteRoom(req.params.id, hotelId);
         res.json({ status: 'success', message: 'Room deleted successfully' });
     } catch (e) { next(e); }

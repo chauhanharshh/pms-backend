@@ -7,7 +7,7 @@ const roomBlocksService = new RoomBlocksService();
 export class RoomBlocksController {
     async getBlocks(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             const blocks = await roomBlocksService.getBlocksByHotel(hotelId);
             res.json({ status: 'success', data: blocks });
         } catch (e) { next(e); }
@@ -31,7 +31,7 @@ export class RoomBlocksController {
 
     async deleteBlock(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             await roomBlocksService.deleteBlock(req.params.id, hotelId);
             res.json({ status: 'success', message: 'Room block deleted' });
         } catch (e) { next(e); }

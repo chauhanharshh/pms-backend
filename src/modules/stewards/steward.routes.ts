@@ -10,12 +10,12 @@ import { createStewardSchema, updateStewardSchema } from './steward.schema';
 const router = Router();
 const stewardService = new StewardService();
 
-router.use(authenticate);
+router.use(authenticate, tenantIsolation);
 
 // Get all stewards by hotel
-router.get('/', tenantIsolation, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const hotelId = req.user?.hotelId || req.query.hotelId as string;
+        const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
         const stewards = await stewardService.getStewardsByHotel(hotelId);
         res.json({ status: 'success', data: stewards });
     } catch (e) { next(e); }
@@ -56,7 +56,7 @@ router.put('/:id', validate(updateStewardSchema), async (req: AuthRequest, res: 
 // Delete steward
 router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const hotelId = req.user?.hotelId || (req.query.hotelId as string);
+        const hotelId = req.hotelId || req.user?.hotelId || (req.query.hotelId as string);
         if (!hotelId) throw new Error("Hotel ID is required");
 
         await stewardService.deleteSteward(req.params.id, hotelId);

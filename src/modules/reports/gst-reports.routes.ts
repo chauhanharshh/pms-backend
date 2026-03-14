@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { GstReportsController } from './gst-reports.controller';
 import { authenticate } from '../../middleware/authenticate';
+import { tenantIsolation } from '../../middleware/tenantIsolation';
 
 const router = Router();
 const gstReportsController = new GstReportsController();
 
-router.use(authenticate);
+router.use(authenticate, tenantIsolation);
 
 router.get('/summary', gstReportsController.getSummaryReport.bind(gstReportsController));
 router.get('/room', gstReportsController.getRoomGstReport.bind(gstReportsController));

@@ -28,7 +28,9 @@ export const tenantIsolation = (
 
     // Super Admin has full visibility and can optionally set hotel context.
     if (role === 'super_admin') {
-      if (requestedHotelId) req.hotelId = requestedHotelId;
+      if (requestedHotelId) {
+        req.hotelId = requestedHotelId;
+      }
       return next();
     }
 
@@ -58,6 +60,7 @@ export const tenantIsolation = (
           throw new BadRequestError('Selected hotel is not accessible for this admin');
         }
         req.hotelId = requestedHotelId;
+        req.user!.hotelId = requestedHotelId;
         return next();
       }
 
@@ -69,6 +72,7 @@ export const tenantIsolation = (
       if (ownedHotelIds.length >= 1) {
         // Default to first owned hotel when context is omitted.
         req.hotelId = ownedHotelIds[0];
+        req.user!.hotelId = ownedHotelIds[0];
         return next();
       }
 
@@ -81,6 +85,7 @@ export const tenantIsolation = (
     }
 
     req.hotelId = user.hotelId;
+    req.user!.hotelId = user.hotelId;
     return next();
   };
 

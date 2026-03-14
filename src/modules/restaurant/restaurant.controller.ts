@@ -223,7 +223,7 @@ export class RestaurantController {
 
     async deleteKOT(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || (req.query.hotelId as string);
+            const hotelId = req.hotelId || req.user?.hotelId || (req.query.hotelId as string);
             await restaurantService.deleteKOT(req.params.id, hotelId);
             res.json({ status: 'success', message: 'KOT deleted' });
         } catch (e) { next(e); }

@@ -7,7 +7,7 @@ const vendorsService = new VendorsService();
 export class VendorsController {
     async getVendors(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             const vendors = await vendorsService.getVendorsByHotel(hotelId);
             res.json({ status: 'success', data: vendors });
         } catch (e) { next(e); }
@@ -31,7 +31,7 @@ export class VendorsController {
 
     async deleteVendor(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             await vendorsService.deleteVendor(req.params.id, hotelId);
             res.json({ status: 'success', message: 'Vendor deleted' });
         } catch (e) { next(e); }

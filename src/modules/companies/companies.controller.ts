@@ -7,7 +7,7 @@ const companiesService = new CompaniesService();
 export class CompaniesController {
     async getCompanies(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             // Admins can fetch all, frontdesk might only fetch active ones. Here we give options.
             const statusFilter = req.query.activeOnly === 'true' ? true : undefined;
             const companies = await companiesService.getCompaniesByHotel(hotelId, statusFilter);
@@ -17,7 +17,7 @@ export class CompaniesController {
 
     async getCompanyById(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             const company = await companiesService.getCompanyById(req.params.id, hotelId);
             res.json({ status: 'success', data: company });
         } catch (e) { next(e); }
@@ -47,7 +47,7 @@ export class CompaniesController {
 
     async deleteCompany(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             await companiesService.deleteCompany(req.params.id, hotelId, req.user!.userId);
             res.json({ status: 'success', message: 'Company removed successfully' });
         } catch (e) { next(e); }

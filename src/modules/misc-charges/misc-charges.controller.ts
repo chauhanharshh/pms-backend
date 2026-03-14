@@ -7,7 +7,7 @@ const miscChargesService = new MiscChargesService();
 export class MiscChargesController {
     async getMiscCharges(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             const charges = await miscChargesService.getMiscChargesByHotel(hotelId, req.query.bookingId as string);
             res.json({ status: 'success', data: charges });
         } catch (e) { next(e); }
@@ -31,7 +31,7 @@ export class MiscChargesController {
 
     async deleteMiscCharge(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             await miscChargesService.deleteMiscCharge(req.params.id, hotelId, req.user!.userId);
             res.json({ status: 'success', message: 'Charge deleted' });
         } catch (e) { next(e); }

@@ -30,7 +30,7 @@ export class AdvancesController {
 
     async deleteAdvance(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             await advancesService.deleteAdvance(req.params.id, hotelId, req.user!.userId);
             res.json({ status: 'success', message: 'Advance deleted' });
         } catch (e) { next(e); }

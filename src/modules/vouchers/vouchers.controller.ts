@@ -7,7 +7,7 @@ const vouchersService = new VouchersService();
 export class VouchersController {
     async getVouchers(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             const vouchers = await vouchersService.getVouchersByHotel(hotelId);
             res.json({ status: 'success', data: vouchers });
         } catch (e) { next(e); }
@@ -31,7 +31,7 @@ export class VouchersController {
 
     async deleteVoucher(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.query.hotelId as string;
+            const hotelId = req.hotelId || req.user?.hotelId || req.query.hotelId as string;
             await vouchersService.deleteVoucher(req.params.id, hotelId, req.user!.userId);
             res.json({ status: 'success', message: 'Voucher deleted' });
         } catch (e) { next(e); }
