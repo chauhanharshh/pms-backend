@@ -126,11 +126,9 @@ export class UsersService {
         email: true,
         phone: true,
         role: true,
-        hotelId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        hotel: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -150,7 +148,6 @@ export class UsersService {
         email: data.email,
         phone: data.phone,
         role: 'admin',
-        hotelId: data.hotelId || null,
         isActive: data.isActive ?? true,
         createdBy: requestingUserId,
         updatedBy: requestingUserId,
@@ -162,11 +159,9 @@ export class UsersService {
         email: true,
         phone: true,
         role: true,
-        hotelId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        hotel: { select: { id: true, name: true } },
       },
     });
   }
@@ -180,7 +175,6 @@ export class UsersService {
       fullName: data.fullName,
       email: data.email,
       phone: data.phone,
-      hotelId: data.hotelId ?? user.hotelId,
       isActive: data.isActive ?? user.isActive,
       updatedBy: requestingUserId,
     };
@@ -201,11 +195,9 @@ export class UsersService {
         email: true,
         phone: true,
         role: true,
-        hotelId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        hotel: { select: { id: true, name: true } },
       },
     });
   }
@@ -232,10 +224,8 @@ export class UsersService {
         email: true,
         phone: true,
         role: true,
-        hotelId: true,
         isActive: true,
         updatedAt: true,
-        hotel: { select: { id: true, name: true } },
       },
     });
   }
@@ -258,10 +248,8 @@ export class UsersService {
         email: true,
         phone: true,
         role: true,
-        hotelId: true,
         isActive: true,
         updatedAt: true,
-        hotel: { select: { id: true, name: true } },
       },
     });
   }
