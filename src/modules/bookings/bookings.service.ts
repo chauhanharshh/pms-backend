@@ -42,6 +42,32 @@ export class BookingsService {
     return booking;
   }
 
+  async updateBooking(bookingId: string, hotelId: string, userId: string, data: any) {
+    const booking = await prisma.booking.findFirst({
+      where: { id: bookingId, hotelId },
+      include: { room: { include: { roomType: true } }, bill: true },
+    });
+
+    if (!booking) throw new NotFoundError('Booking not found');
+
+    if (data?.status === 'cancelled') {
+      if (booking.status !== 'pending' && booking.status !== 'confirmed') {
+        throw new BadRequestError('Only pending or confirmed reservations can be cancelled');
+      }
+
+      return prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: 'cancelled',
+          updatedBy: userId,
+        },
+        include: { room: { include: { roomType: true } }, bill: true },
+      });
+    }
+
+    throw new BadRequestError('Unsupported booking update');
+  }
+
   async createReservation(data: any, hotelId: string, userId: string) {
     const isAvailable = await roomsService.checkRoomAvailability(
       hotelId,

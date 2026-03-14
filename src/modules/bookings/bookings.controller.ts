@@ -31,6 +31,16 @@ export class BookingsController {
     }
   }
 
+  async updateBooking(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const booking = await bookingsService.updateBooking(id, req.hotelId!, req.user!.userId, req.body);
+      return ResponseHandler.success(res, booking, 'Booking updated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async createReservation(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const booking = await bookingsService.createReservation(

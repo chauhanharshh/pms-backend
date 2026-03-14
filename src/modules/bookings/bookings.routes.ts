@@ -10,6 +10,7 @@ router.use(authenticate, tenantIsolation);
 
 router.get('/', bookingsController.getBookings.bind(bookingsController));
 router.get('/:id', bookingsController.getBookingById.bind(bookingsController));
+router.put('/:id', bookingsController.updateBooking.bind(bookingsController));
 router.post('/reservation', bookingsController.createReservation.bind(bookingsController));
 router.post('/walk-in', bookingsController.walkIn.bind(bookingsController));
 router.put('/:id/check-in', bookingsController.checkIn.bind(bookingsController));
