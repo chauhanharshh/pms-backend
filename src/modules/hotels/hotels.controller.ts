@@ -38,7 +38,9 @@ export class HotelsController {
   async getAllHotels(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { userId, role } = req.user!;
-      const hotels = await hotelsService.getAllHotels(userId, String(role), req.hotelId, req.ownedHotelIds);
+      const normalizedRole = String(role);
+      const listHotelContext = normalizedRole === 'super_admin' ? req.hotelId : undefined;
+      const hotels = await hotelsService.getAllHotels(userId, normalizedRole, listHotelContext, req.ownedHotelIds);
       return ResponseHandler.success(res, hotels);
     } catch (error) {
       next(error);

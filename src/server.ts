@@ -173,6 +173,19 @@ const startServer = async () => {
       ADD COLUMN IF NOT EXISTS "adminId" UUID;
     `);
 
+    await prisma.$executeRawUnsafe(`
+      UPDATE "hotels" h
+      SET "adminId" = h."createdBy"
+      WHERE h."adminId" IS NULL
+        AND h."createdBy" IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM "users" u
+          WHERE u."id" = h."createdBy"
+            AND u."role" = 'admin'
+        );
+    `);
+
     const PORT = Number(process.env.PORT) || 3000;
     app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server running on port ${PORT}`);

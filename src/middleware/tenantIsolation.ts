@@ -48,6 +48,11 @@ export const tenantIsolation = (
       const ownedHotelIds = ownedHotels.map((h) => h.id);
       req.ownedHotelIds = ownedHotelIds;
 
+      if (isHotelsModule && req.method === 'GET' && req.path === '/') {
+        // Always return full owned hotel list for admins on /hotels.
+        return next();
+      }
+
       if (requestedHotelId) {
         if (!ownedHotelIds.includes(requestedHotelId)) {
           throw new BadRequestError('Selected hotel is not accessible for this admin');
