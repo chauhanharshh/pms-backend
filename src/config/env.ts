@@ -10,7 +10,9 @@ const envSchema = z.object({
   DATABASE_URL: z.string(),
   JWT_SECRET: z.string(),
   JWT_EXPIRES_IN: z.string().default('7d'),
-  CORS_ORIGIN: z.string().default('http://localhost:5173,http://localhost:3000'),
+  CORS_ORIGIN: z.string().default(
+    'http://localhost:5173,http://localhost:3000,https://pms-frontend-sigma-gilt.vercel.app,https://*.vercel.app',
+  ),
   LOG_LEVEL: z.string().default('info'),
 });
 
