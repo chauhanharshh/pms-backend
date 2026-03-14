@@ -37,13 +37,37 @@ const app: Application = express();
 app.use(helmet());
 
 // Parse multiple CORS origins from comma-separated env var
-const allowedOrigins = config.cors.origin.split(',').map((o: string) => o.trim());
+const normalizeOrigin = (value: string) => value.trim().replace(/\/+$/, '');
+const allowedOrigins = config.cors.origin
+  .split(',')
+  .map((o: string) => normalizeOrigin(o))
+  .filter(Boolean);
+
+const isOriginAllowed = (origin?: string) => {
+  // Electron desktop app sends no origin for local native requests.
+  if (!origin) {
+    return true;
+  }
+
+  const normalizedOrigin = normalizeOrigin(origin);
+  if (allowedOrigins.includes('*') || allowedOrigins.includes(normalizedOrigin)) {
+    return true;
+  }
+
+  // Optional wildcard support for Vercel previews when configured via CORS_ORIGIN.
+  if (
+    normalizedOrigin.endsWith('.vercel.app')
+    && (allowedOrigins.includes('https://*.vercel.app') || allowedOrigins.includes('*.vercel.app'))
+  ) {
+    return true;
+  }
+
+  return false;
+};
+
 app.use(cors({
   origin: (origin, callback) => {
-    // 1. Allow if CORS_ORIGIN is '*'
-    // 2. Allow if no origin (Electron desktop app sends no origin)
-    // 3. Allow if origin is in the explicitly allowed list
-    if (allowedOrigins.includes('*') || !origin || allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
