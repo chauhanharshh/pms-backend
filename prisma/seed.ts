@@ -3,8 +3,45 @@ import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
+async function ensureSuperAdminEnumValue() {
+  await prisma.$executeRawUnsafe(`
+    DO $$
+    BEGIN
+        ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'super_admin';
+    EXCEPTION
+        WHEN duplicate_object THEN NULL;
+    END $$;
+  `);
+}
+
 async function main() {
   console.log('🌱 Starting database seeding...');
+
+  await ensureSuperAdminEnumValue();
+
+  // Create fixed Super Admin user
+  const superAdminPassword = await bcrypt.hash('superadmin123', 10);
+
+  const superAdmin = await prisma.user.upsert({
+    where: { username: 'superadmin' },
+    update: {
+      passwordHash: superAdminPassword,
+      role: 'super_admin' as any,
+      hotelId: null,
+      isActive: true,
+      fullName: 'Super Administrator',
+    },
+    create: {
+      username: 'superadmin',
+      passwordHash: superAdminPassword,
+      fullName: 'Super Administrator',
+      email: 'superadmin@pms.com',
+      role: 'super_admin' as any,
+      isActive: true,
+    },
+  });
+
+  console.log('✅ Super admin user created:', superAdmin.username);
 
   // Create admin user
   const adminPassword = await bcrypt.hash('admin123', 10);
@@ -194,6 +231,9 @@ async function main() {
   console.log('\n🎉 Seeding completed successfully!\n');
   console.log('📋 Login Credentials:');
   console.log('─────────────────────────────────');
+  console.log('Super Admin:');
+  console.log('  Username: superadmin');
+  console.log('  Password: superadmin123');
   console.log('Admin:');
   console.log('  Username: admin');
   console.log('  Password: admin123');

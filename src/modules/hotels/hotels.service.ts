@@ -8,7 +8,7 @@ import bcrypt from 'bcrypt';
 export class HotelsService {
   async getAllHotels(userId: string, role: string, hotelId?: string) {
     try {
-      if (role === 'admin') {
+      if (role === 'admin' || role === 'super_admin') {
         return prisma.hotel.findMany({
           where: hotelId ? { id: hotelId } : {},
           orderBy: { name: 'asc' },

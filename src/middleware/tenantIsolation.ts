@@ -17,8 +17,8 @@ export const tenantIsolation = (
   try {
     const user = req.user!;
 
-    // Admin can specify hotelId via header or query
-    if (user.role === 'admin') {
+    // Super Admin can specify hotelId via header or query and can also work in consolidated mode.
+    if (String(user.role) === 'super_admin') {
       const headerHotelId = req.headers['x-hotel-id'] as string;
       const queryHotelId = req.query.hotelId as string;
 
@@ -27,7 +27,22 @@ export const tenantIsolation = (
       } else if (queryHotelId) {
         req.hotelId = queryHotelId;
       }
-      // Admin without hotelId can see all hotels (no req.hotelId set)
+      // Super Admin without hotelId can see all hotels (no req.hotelId set)
+    } else if (String(user.role) === 'admin') {
+      // Scoped admin users are always locked to their assigned hotel.
+      if (user.hotelId) {
+        req.hotelId = user.hotelId;
+      } else {
+        // Backward compatibility: legacy admin with no hotel assignment can switch context.
+        const headerHotelId = req.headers['x-hotel-id'] as string;
+        const queryHotelId = req.query.hotelId as string;
+
+        if (headerHotelId) {
+          req.hotelId = headerHotelId;
+        } else if (queryHotelId) {
+          req.hotelId = queryHotelId;
+        }
+      }
     } else {
       // Hotel users MUST have hotelId in their JWT
       if (!user.hotelId) {

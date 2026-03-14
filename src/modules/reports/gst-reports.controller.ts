@@ -6,7 +6,8 @@ const gstReportsService = new GstReportsService();
 export class GstReportsController {
     async getSummaryReport(req: Request, res: Response) {
         const user = (req as any).user;
-        const targetHotelId = user.role === 'admin' && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
+        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
         const { startDate, endDate, status } = req.query;
         const result = await gstReportsService.getSummaryReport(
             targetHotelId,
@@ -19,7 +20,8 @@ export class GstReportsController {
 
     async getRoomGstReport(req: Request, res: Response) {
         const user = (req as any).user;
-        const targetHotelId = user.role === 'admin' && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
+        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
         const { startDate, endDate, status, companyId } = req.query;
         const result = await gstReportsService.getRoomGstReport(
             targetHotelId,
@@ -33,7 +35,8 @@ export class GstReportsController {
 
     async getRestaurantGstReport(req: Request, res: Response) {
         const user = (req as any).user;
-        const targetHotelId = user.role === 'admin' && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
+        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
         const { startDate, endDate, status, companyId } = req.query;
         const result = await gstReportsService.getRestaurantGstReport(
             targetHotelId,
@@ -47,7 +50,8 @@ export class GstReportsController {
 
     async getMiscGstReport(req: Request, res: Response) {
         const user = (req as any).user;
-        const targetHotelId = user.role === 'admin' && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
+        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
         const { startDate, endDate, status, companyId } = req.query;
         const result = await gstReportsService.getMiscGstReport(
             targetHotelId,
@@ -61,7 +65,8 @@ export class GstReportsController {
 
     async getInvoiceWiseReport(req: Request, res: Response) {
         const user = (req as any).user;
-        const targetHotelId = user.role === 'admin' && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
+        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
         const { startDate, endDate, status, companyId } = req.query;
         const result = await gstReportsService.getInvoiceWiseReport(
             targetHotelId,
@@ -75,7 +80,8 @@ export class GstReportsController {
 
     async getSacHsnReport(req: Request, res: Response) {
         const user = (req as any).user;
-        const targetHotelId = user.role === 'admin' && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
+        const canSwitchHotels = user.role === 'super_admin' || (user.role === 'admin' && !user.hotelId);
+        const targetHotelId = canSwitchHotels && req.query.hotelId ? (req.query.hotelId as string) : user.hotelId;
         const { startDate, endDate, status } = req.query;
         const result = await gstReportsService.getSacHsnReport(
             targetHotelId,

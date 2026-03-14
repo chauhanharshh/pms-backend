@@ -12,7 +12,8 @@ export class RestaurantController {
 
         // Authorization check helper
         const canBossCheck = async () => {
-            if (user.role === 'admin') return true;
+            if (String(user.role) === 'super_admin') return true;
+            if (String(user.role) === 'admin') return !user.hotelId;
             if (!user.hotelId) return false;
             const assignedHotel = await prisma.hotel.findUnique({ where: { id: user.hotelId } });
             return !!(assignedHotel && (assignedHotel as any).posBossMode);
