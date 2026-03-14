@@ -38,10 +38,20 @@ app.use(helmet());
 
 // Parse multiple CORS origins from comma-separated env var
 const normalizeOrigin = (value: string) => value.trim().replace(/\/+$/, '');
-const allowedOrigins = config.cors.origin
+const configuredOrigins = config.cors.origin
   .split(',')
   .map((o: string) => normalizeOrigin(o))
   .filter(Boolean);
+
+// Safety fallback for production deployments when CORS_ORIGIN is partially configured.
+const requiredOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://pms-frontend-sigma-gilt.vercel.app',
+  'https://*.vercel.app',
+].map(normalizeOrigin);
+
+const allowedOrigins = Array.from(new Set([...configuredOrigins, ...requiredOrigins]));
 
 const isOriginAllowed = (origin?: string) => {
   // Electron desktop app sends no origin for local native requests.
