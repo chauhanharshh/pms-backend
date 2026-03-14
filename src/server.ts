@@ -3,6 +3,8 @@ import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
+import path from 'path';
+import fs from 'fs';
 import { config } from './config/env';
 import logger from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
@@ -90,6 +92,11 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Static uploads (branding logos)
+const uploadsRoot = path.join(process.cwd(), 'uploads');
+fs.mkdirSync(path.join(uploadsRoot, 'logos'), { recursive: true });
+app.use('/uploads', express.static(uploadsRoot));
+
 // HTTP logging
 app.use(pinoHttp({ logger }));
 
@@ -158,6 +165,13 @@ const startServer = async () => {
   }
 
   try {
+    // Defensive schema patch for deployments where migration files are not applied yet.
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "hotels"
+      ADD COLUMN IF NOT EXISTS "brandName" VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS "logoUrl" VARCHAR(500);
+    `);
+
     const PORT = Number(process.env.PORT) || 3000;
     app.listen(PORT, '0.0.0.0', () => {
       logger.info(`🚀 Server running on port ${PORT}`);

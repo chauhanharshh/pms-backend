@@ -3,6 +3,7 @@ import { AppError } from '../utils/errors';
 import logger from '../utils/logger';
 import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
+import multer from 'multer';
 
 export const errorHandler = (
   err: Error,
@@ -46,6 +47,20 @@ export const errorHandler = (
         message: 'Record not found',
       });
     }
+  }
+
+  // Multer upload errors
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'File size exceeds 2MB limit',
+      });
+    }
+    return res.status(400).json({
+      status: 'fail',
+      message: err.message || 'File upload failed',
+    });
   }
 
   // Custom application errors (using property check for better reliability)

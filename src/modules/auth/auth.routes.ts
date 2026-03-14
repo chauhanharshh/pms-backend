@@ -6,6 +6,7 @@ const router = Router();
 const authController = new AuthController();
 
 // Public routes
+router.get('/branding', authController.getBranding.bind(authController));
 router.post('/login', authController.login.bind(authController));
 
 // Protected routes

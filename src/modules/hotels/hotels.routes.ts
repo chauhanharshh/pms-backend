@@ -3,6 +3,7 @@ import { HotelsController } from './hotels.controller';
 import { authenticate } from '../../middleware/authenticate';
 import { tenantIsolation } from '../../middleware/tenantIsolation';
 import { adminOnly, managerAndAbove } from '../../guards/authorization';
+import { uploadLogo } from '../../middleware/uploadLogo';
 
 const router = Router();
 const hotelsController = new HotelsController();
@@ -12,6 +13,11 @@ router.use(authenticate);
 
 // Get all hotels (with tenant isolation)
 router.get('/', tenantIsolation, hotelsController.getAllHotels.bind(hotelsController));
+
+// Branding
+router.get('/branding', tenantIsolation, hotelsController.getBranding.bind(hotelsController));
+router.put('/branding', tenantIsolation, adminOnly, hotelsController.updateBranding.bind(hotelsController));
+router.post('/branding/logo', tenantIsolation, adminOnly, uploadLogo.single('logo'), hotelsController.uploadBrandingLogo.bind(hotelsController));
 
 // Get dashboard stats
 router.get('/stats', tenantIsolation, hotelsController.getStats.bind(hotelsController));

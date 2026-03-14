@@ -4,8 +4,78 @@ import { CreateHotelInput, UpdateHotelInput } from './hotels.validation';
 import { NotFoundError, ForbiddenError } from '../../utils/errors';
 import logger from '../../utils/logger';
 import bcrypt from 'bcrypt';
+import fs from 'fs';
+import path from 'path';
 
 export class HotelsService {
+  async getBranding(hotelId: string) {
+    const hotel = await prisma.hotel.findUnique({
+      where: { id: hotelId },
+      select: {
+        id: true,
+        name: true,
+        brandName: true,
+        logoUrl: true,
+      },
+    });
+
+    if (!hotel) throw new NotFoundError('Hotel not found');
+    return hotel;
+  }
+
+  async updateBranding(hotelId: string, data: { brandName?: string | null }, userId: string) {
+    const hotel = await prisma.hotel.findUnique({ where: { id: hotelId }, select: { id: true } });
+    if (!hotel) throw new NotFoundError('Hotel not found');
+
+    return prisma.hotel.update({
+      where: { id: hotelId },
+      data: {
+        brandName: data.brandName ?? null,
+        updatedBy: userId,
+      },
+      select: {
+        id: true,
+        name: true,
+        brandName: true,
+        logoUrl: true,
+      },
+    });
+  }
+
+  async updateBrandingLogo(hotelId: string, logoUrl: string, userId: string) {
+    const current = await prisma.hotel.findUnique({
+      where: { id: hotelId },
+      select: { id: true, logoUrl: true },
+    });
+    if (!current) throw new NotFoundError('Hotel not found');
+
+    // Cleanup previous local logo file if it exists.
+    if (current.logoUrl && current.logoUrl.startsWith('/uploads/logos/')) {
+      const oldPath = path.join(process.cwd(), current.logoUrl.replace(/^\//, ''));
+      if (fs.existsSync(oldPath)) {
+        try {
+          fs.unlinkSync(oldPath);
+        } catch {
+          // Best-effort cleanup; ignore deletion failures.
+        }
+      }
+    }
+
+    return prisma.hotel.update({
+      where: { id: hotelId },
+      data: {
+        logoUrl,
+        updatedBy: userId,
+      },
+      select: {
+        id: true,
+        name: true,
+        brandName: true,
+        logoUrl: true,
+      },
+    });
+  }
+
   async getAllHotels(userId: string, role: string, hotelId?: string) {
     try {
       if (role === 'admin' || role === 'super_admin') {

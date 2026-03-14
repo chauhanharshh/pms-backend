@@ -7,6 +7,16 @@ import { loginSchema } from './auth.validation';
 const authService = new AuthService();
 
 export class AuthController {
+  async getBranding(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const username = req.query.username as string | undefined;
+      const branding = await authService.getBrandingByUsername(username);
+      return ResponseHandler.success(res, branding);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async login(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const input = loginSchema.parse(req.body);

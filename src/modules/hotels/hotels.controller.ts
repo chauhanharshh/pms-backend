@@ -5,10 +5,36 @@ import { ResponseHandler } from '../../utils/response';
 import { createHotelSchema, updateHotelSchema } from './hotels.validation';
 import { z } from 'zod';
 import logger from '../../utils/logger';
+import { BadRequestError } from '../../utils/errors';
 
 const hotelsService = new HotelsService();
 
 export class HotelsController {
+  private resolveBrandingHotelId(req: AuthRequest): string {
+    const user = req.user!;
+    const role = String(user.role);
+    const requested = (req.params.id || req.query.hotelId || req.body.hotelId) as string | undefined;
+
+    if (role === 'super_admin') {
+      const selected = requested || req.hotelId;
+      if (!selected) throw new BadRequestError('hotelId is required for Super Admin branding actions');
+      return selected;
+    }
+
+    if (role === 'admin') {
+      if (user.hotelId) return user.hotelId;
+      const selected = requested || req.hotelId;
+      if (!selected) throw new BadRequestError('hotelId is required for unscoped admin branding actions');
+      return selected;
+    }
+
+    if (!user.hotelId) {
+      throw new BadRequestError('User is not assigned to any hotel');
+    }
+
+    return user.hotelId;
+  }
+
   async getAllHotels(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { userId, role } = req.user!;
@@ -100,6 +126,44 @@ export class HotelsController {
       const hotelId = req.params.id || req.hotelId;
       const stats = await hotelsService.getDashboardStats(hotelId);
       return ResponseHandler.success(res, stats);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getBranding(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const hotelId = this.resolveBrandingHotelId(req);
+      const branding = await hotelsService.getBranding(hotelId);
+      return ResponseHandler.success(res, branding);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateBranding(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const hotelId = this.resolveBrandingHotelId(req);
+      const payload = z.object({
+        brandName: z.string().max(255).optional().nullable(),
+      }).parse(req.body);
+      const branding = await hotelsService.updateBranding(hotelId, payload, req.user!.userId);
+      return ResponseHandler.success(res, branding, 'Branding updated successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async uploadBrandingLogo(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const hotelId = this.resolveBrandingHotelId(req);
+      if (!req.file) {
+        throw new BadRequestError('Logo file is required');
+      }
+
+      const logoUrl = `/uploads/logos/${req.file.filename}`;
+      const branding = await hotelsService.updateBrandingLogo(hotelId, logoUrl, req.user!.userId);
+      return ResponseHandler.success(res, branding, 'Logo uploaded successfully');
     } catch (error) {
       next(error);
     }

@@ -6,6 +6,43 @@ import { LoginInput } from './auth.validation';
 import logger from '../../utils/logger';
 
 export class AuthService {
+  async getBrandingByUsername(username?: string) {
+    const cleanUsername = (username || '').trim();
+    if (!cleanUsername) {
+      return {
+        brandName: null,
+        logoUrl: null,
+      };
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { username: cleanUsername },
+      include: {
+        hotel: {
+          select: {
+            id: true,
+            name: true,
+            brandName: true,
+            logoUrl: true,
+          },
+        },
+      },
+    });
+
+    if (!user || !user.hotel) {
+      return {
+        brandName: null,
+        logoUrl: null,
+      };
+    }
+
+    return {
+      brandName: user.hotel.brandName || null,
+      logoUrl: user.hotel.logoUrl || null,
+      hotelName: user.hotel.name,
+    };
+  }
+
   private async ensureSuperAdminEnumValue() {
     // Defensive runtime migration for environments where DB migration was skipped.
     await prisma.$executeRawUnsafe(`
@@ -92,6 +129,8 @@ export class AuthService {
           hotel: user.hotel ? {
             id: user.hotel.id,
             name: user.hotel.name,
+            brandName: (user.hotel as any).brandName || null,
+            logoUrl: (user.hotel as any).logoUrl || null,
           } : null,
         },
       };

@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 export const createHotelSchema = z.object({
   name: z.string().min(1, 'Hotel name is required'),
+  brandName: z.string().max(255).optional().nullable(),
+  logoUrl: z.string().max(500).optional().nullable(),
   address: z.string().optional().nullable(),
   city: z.string().optional().nullable(),
   state: z.string().optional().nullable(),

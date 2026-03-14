@@ -10,6 +10,7 @@ export interface AuthenticatedUser {
 export interface AuthRequest extends Request {
   user?: AuthenticatedUser;
   hotelId?: string; // Tenant isolation
+  file?: Express.Multer.File;
 }
 
 export interface PaginationParams {
