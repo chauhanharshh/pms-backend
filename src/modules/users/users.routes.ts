@@ -12,6 +12,7 @@ router.use(authenticate);
 router.get('/admins', superAdminOnly, usersController.getAdminAccounts.bind(usersController));
 router.post('/admins', superAdminOnly, usersController.createAdminAccount.bind(usersController));
 router.put('/admins/:id', superAdminOnly, usersController.updateAdminAccount.bind(usersController));
+router.delete('/admins/:id', superAdminOnly, usersController.deleteAdminAccount.bind(usersController));
 router.patch('/admins/:id/reset-password', superAdminOnly, usersController.resetAdminPassword.bind(usersController));
 router.patch('/admins/:id/status', superAdminOnly, usersController.setAdminStatus.bind(usersController));
 

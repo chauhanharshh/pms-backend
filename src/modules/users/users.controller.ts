@@ -56,6 +56,13 @@ export class UsersController {
         } catch (e) { next(e); }
     }
 
+    async deleteAdminAccount(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            await usersService.deleteAdminAccount(req.params.id);
+            res.json({ status: 'success', message: 'Admin account deleted successfully' });
+        } catch (e) { next(e); }
+    }
+
     async resetAdminPassword(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const { password } = req.body;

@@ -202,6 +202,16 @@ export class UsersService {
     });
   }
 
+  async deleteAdminAccount(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundError('User not found');
+    if (user.role !== 'admin') throw new BadRequestError('Only admin accounts can be deleted from this panel');
+
+    return prisma.user.delete({
+      where: { id: userId },
+    });
+  }
+
   async resetAdminPassword(userId: string, password: string, requestingUserId: string) {
     if (!password) throw new BadRequestError('Password is required');
 
