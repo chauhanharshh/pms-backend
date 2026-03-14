@@ -159,13 +159,18 @@ export class HotelsController {
 
   async uploadBrandingLogo(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const hotelId = this.resolveBrandingHotelId(req);
       if (!req.file) {
         throw new BadRequestError('Logo file is required');
       }
 
       const logoUrl = `/uploads/logos/${req.file.filename}`;
-      const branding = await hotelsService.updateBrandingLogo(hotelId, logoUrl, req.user!.userId);
+      const user = req.user!;
+      const requested = (req.params.id || req.query.hotelId || req.body.hotelId) as string | undefined;
+
+      const branding = String(user.role) === 'admin'
+        ? await hotelsService.updateBrandingLogoForAdmin(user.userId, logoUrl, requested)
+        : await hotelsService.updateBrandingLogo(this.resolveBrandingHotelId(req), logoUrl, user.userId);
+
       return ResponseHandler.success(res, branding, 'Logo uploaded successfully');
     } catch (error) {
       next(error);

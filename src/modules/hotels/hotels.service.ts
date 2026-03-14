@@ -76,6 +76,55 @@ export class HotelsService {
     });
   }
 
+  async updateBrandingLogoForAdmin(adminUserId: string, logoUrl: string, requestedHotelId?: string) {
+    const ownedHotels = await prisma.hotel.findMany({
+      where: {
+        OR: [
+          { adminId: adminUserId },
+          { adminId: null, createdBy: adminUserId },
+        ],
+      },
+      select: { id: true },
+    });
+
+    if (ownedHotels.length === 0) {
+      throw new NotFoundError('No hotels found for this admin');
+    }
+
+    const ownedHotelIds = ownedHotels.map((hotel) => hotel.id);
+    if (requestedHotelId && !ownedHotelIds.includes(requestedHotelId)) {
+      throw new ForbiddenError('Selected hotel is not accessible for this admin');
+    }
+
+    await prisma.hotel.updateMany({
+      where: { id: { in: ownedHotelIds } },
+      data: {
+        logoUrl,
+        updatedBy: adminUserId,
+      },
+    });
+
+    const representativeHotelId = requestedHotelId || ownedHotelIds[0];
+    const representative = await prisma.hotel.findUnique({
+      where: { id: representativeHotelId },
+      select: {
+        id: true,
+        name: true,
+        brandName: true,
+        logoUrl: true,
+      },
+    });
+
+    if (!representative) {
+      throw new NotFoundError('Hotel not found');
+    }
+
+    return {
+      ...representative,
+      propagatedToHotelCount: ownedHotelIds.length,
+    };
+  }
+
   async getAllHotels(userId: string, role: string, hotelId?: string, ownedHotelIds?: string[]) {
     try {
       if (role === 'super_admin') {
