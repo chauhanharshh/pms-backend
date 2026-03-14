@@ -140,7 +140,6 @@ export class UsersService {
     const existing = await prisma.user.findUnique({ where: { username: data.username } });
     if (existing) throw new BadRequestError('Username already exists');
     if (!data.password) throw new BadRequestError('Password is required');
-    if (!data.hotelId) throw new BadRequestError('Hotel assignment is required for admin users');
 
     const passwordHash = await bcrypt.hash(data.password, 10);
     return prisma.user.create({
@@ -151,7 +150,7 @@ export class UsersService {
         email: data.email,
         phone: data.phone,
         role: 'admin',
-        hotelId: data.hotelId,
+        hotelId: data.hotelId || null,
         isActive: data.isActive ?? true,
         createdBy: requestingUserId,
         updatedBy: requestingUserId,
