@@ -38,7 +38,7 @@ export class HotelsController {
   async getAllHotels(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { userId, role } = req.user!;
-      const hotels = await hotelsService.getAllHotels(userId, role, req.hotelId);
+      const hotels = await hotelsService.getAllHotels(userId, String(role), req.hotelId, req.ownedHotelIds);
       return ResponseHandler.success(res, hotels);
     } catch (error) {
       next(error);
@@ -61,7 +61,8 @@ export class HotelsController {
       const input = createHotelSchema.parse(rest);
       const hotel = await hotelsService.createHotel(
         { ...input, hotelUsername, hotelPassword } as any,
-        req.user!.userId
+        req.user!.userId,
+        String(req.user!.role)
       );
       return ResponseHandler.created(res, hotel, 'Hotel created successfully');
     } catch (error) {

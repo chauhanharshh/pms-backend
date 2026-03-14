@@ -14,7 +14,7 @@ export class AdvancesController {
 
     async createAdvance(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const advance = await advancesService.createAdvance(req.body, hotelId, req.user!.userId);
             res.status(201).json({ status: 'success', data: advance });
         } catch (e) { next(e); }
@@ -22,7 +22,7 @@ export class AdvancesController {
 
     async updateAdvance(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const advance = await advancesService.updateAdvance(req.params.id, hotelId, req.body, req.user!.userId);
             res.json({ status: 'success', data: advance });
         } catch (e) { next(e); }

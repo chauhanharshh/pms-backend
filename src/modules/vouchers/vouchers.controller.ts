@@ -15,7 +15,7 @@ export class VouchersController {
 
     async createVoucher(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const voucher = await vouchersService.createVoucher(req.body, hotelId, req.user!.userId);
             res.status(201).json({ status: 'success', data: voucher });
         } catch (e) { next(e); }
@@ -23,7 +23,7 @@ export class VouchersController {
 
     async updateVoucher(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const voucher = await vouchersService.updateVoucher(req.params.id, hotelId, req.body, req.user!.userId);
             res.json({ status: 'success', data: voucher });
         } catch (e) { next(e); }

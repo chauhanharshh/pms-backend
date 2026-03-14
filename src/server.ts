@@ -169,7 +169,8 @@ const startServer = async () => {
     await prisma.$executeRawUnsafe(`
       ALTER TABLE "hotels"
       ADD COLUMN IF NOT EXISTS "brandName" VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS "logoUrl" VARCHAR(500);
+      ADD COLUMN IF NOT EXISTS "logoUrl" VARCHAR(500),
+      ADD COLUMN IF NOT EXISTS "adminId" UUID;
     `);
 
     const PORT = Number(process.env.PORT) || 3000;

@@ -15,7 +15,7 @@ export class MiscChargesController {
 
     async createMiscCharge(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const charge = await miscChargesService.createMiscCharge(req.body, hotelId, req.user!.userId);
             res.status(201).json({ status: 'success', data: charge });
         } catch (e) { next(e); }
@@ -23,7 +23,7 @@ export class MiscChargesController {
 
     async updateMiscCharge(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const charge = await miscChargesService.updateMiscCharge(req.params.id, hotelId, req.body, req.user!.userId);
             res.json({ status: 'success', data: charge });
         } catch (e) { next(e); }

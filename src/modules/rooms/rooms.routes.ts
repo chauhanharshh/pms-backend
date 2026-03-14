@@ -49,7 +49,7 @@ router.get('/:id', async (req: AuthRequest, res: Response, next: NextFunction) =
 // Update room status
 router.patch('/:id/status', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const hotelId = req.user?.hotelId || req.body.hotelId;
+        const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
         const room = await roomsService.updateRoomStatus(
             req.params.id, req.body.status, hotelId, req.user!.userId, req.body.maintenanceNote
         );
@@ -60,7 +60,7 @@ router.patch('/:id/status', async (req: AuthRequest, res: Response, next: NextFu
 // Update room basic properties
 router.put('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const hotelId = req.user?.hotelId || req.body.hotelId;
+        const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
         const room = await roomsService.updateRoom(req.params.id, hotelId, req.body, req.user!.userId);
         res.json({ status: 'success', data: room });
     } catch (e) { next(e); }

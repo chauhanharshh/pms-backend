@@ -25,7 +25,7 @@ export class CompaniesController {
 
     async createCompany(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
 
             if (hotelId === 'all') {
                 const companies = await companiesService.createCompanyForAllHotels(req.body, req.user!.userId);
@@ -39,7 +39,7 @@ export class CompaniesController {
 
     async updateCompany(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const company = await companiesService.updateCompany(req.params.id, hotelId, req.body, req.user!.userId);
             res.json({ status: 'success', data: company });
         } catch (e) { next(e); }
@@ -55,7 +55,7 @@ export class CompaniesController {
 
     async toggleStatus(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const company = await companiesService.toggleStatus(req.params.id, hotelId, req.user!.userId);
             res.json({ status: 'success', data: company });
         } catch (e) { next(e); }

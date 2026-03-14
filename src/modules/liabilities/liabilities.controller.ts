@@ -15,7 +15,7 @@ export class LiabilitiesController {
 
     async createLiability(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const liability = await liabilitiesService.createLiability(req.body, hotelId);
             res.status(201).json({ status: 'success', data: liability });
         } catch (e) { next(e); }
@@ -23,7 +23,7 @@ export class LiabilitiesController {
 
     async updateLiability(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const liability = await liabilitiesService.updateLiability(req.params.id, hotelId, req.body);
             res.json({ status: 'success', data: liability });
         } catch (e) { next(e); }
@@ -31,7 +31,7 @@ export class LiabilitiesController {
 
     async addPayment(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const liability = await liabilitiesService.addPayment(req.params.id, hotelId, req.body);
             res.json({ status: 'success', data: liability });
         } catch (e) { next(e); }

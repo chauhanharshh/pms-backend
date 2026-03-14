@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../types';
 import { BadRequestError } from '../utils/errors';
+import prisma from '../config/database';
 
 /**
  * Tenant Isolation Middleware
@@ -14,45 +15,69 @@ export const tenantIsolation = (
   res: Response,
   next: NextFunction
 ) => {
-  try {
+  const run = async () => {
     const user = req.user!;
+    const role = String(user.role);
 
-    // Super Admin can specify hotelId via header or query and can also work in consolidated mode.
-    if (String(user.role) === 'super_admin') {
-      const headerHotelId = req.headers['x-hotel-id'] as string;
-      const queryHotelId = req.query.hotelId as string;
+    const requestedHotelId = (req.headers['x-hotel-id'] as string) || (req.query.hotelId as string);
 
-      if (headerHotelId) {
-        req.hotelId = headerHotelId;
-      } else if (queryHotelId) {
-        req.hotelId = queryHotelId;
-      }
-      // Super Admin without hotelId can see all hotels (no req.hotelId set)
-    } else if (String(user.role) === 'admin') {
-      // Scoped admin users are always locked to their assigned hotel.
-      if (user.hotelId) {
-        req.hotelId = user.hotelId;
-      } else {
-        // Backward compatibility: legacy admin with no hotel assignment can switch context.
-        const headerHotelId = req.headers['x-hotel-id'] as string;
-        const queryHotelId = req.query.hotelId as string;
+    const isHotelsModule = req.baseUrl.endsWith('/hotels');
+    const allowNoHotelContext =
+      (isHotelsModule && req.method === 'GET' && req.path === '/')
+      || (isHotelsModule && req.method === 'POST' && req.path === '/');
 
-        if (headerHotelId) {
-          req.hotelId = headerHotelId;
-        } else if (queryHotelId) {
-          req.hotelId = queryHotelId;
-        }
-      }
-    } else {
-      // Hotel users MUST have hotelId in their JWT
-      if (!user.hotelId) {
-        throw new BadRequestError('Hotel user must be assigned to a hotel');
-      }
-      req.hotelId = user.hotelId;
+    // Super Admin has full visibility and can optionally set hotel context.
+    if (role === 'super_admin') {
+      if (requestedHotelId) req.hotelId = requestedHotelId;
+      return next();
     }
 
-    next();
-  } catch (error) {
-    next(error);
-  }
+    // Admin users are tenant owners: resolve all owned hotels once per request.
+    if (role === 'admin') {
+      const ownedHotels = await prisma.hotel.findMany({
+        where: {
+          OR: [
+            { adminId: user.userId },
+            // Backward compatibility for existing data created before adminId was introduced.
+            { adminId: null, createdBy: user.userId },
+          ],
+        },
+        select: { id: true },
+      });
+
+      const ownedHotelIds = ownedHotels.map((h) => h.id);
+      req.ownedHotelIds = ownedHotelIds;
+
+      if (requestedHotelId) {
+        if (!ownedHotelIds.includes(requestedHotelId)) {
+          throw new BadRequestError('Selected hotel is not accessible for this admin');
+        }
+        req.hotelId = requestedHotelId;
+        return next();
+      }
+
+      if (allowNoHotelContext) {
+        // Controllers/services should use req.ownedHotelIds for list/create-hotel flows.
+        return next();
+      }
+
+      if (ownedHotelIds.length >= 1) {
+        // Default to first owned hotel when context is omitted.
+        req.hotelId = ownedHotelIds[0];
+        return next();
+      }
+
+      throw new BadRequestError('No hotels assigned to this admin yet');
+    }
+
+    // Hotel staff users MUST have a fixed assigned hotel.
+    if (!user.hotelId) {
+      throw new BadRequestError('Hotel user must be assigned to a hotel');
+    }
+
+    req.hotelId = user.hotelId;
+    return next();
+  };
+
+  run().catch(next);
 };

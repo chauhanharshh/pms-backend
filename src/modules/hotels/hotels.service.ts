@@ -76,11 +76,30 @@ export class HotelsService {
     });
   }
 
-  async getAllHotels(userId: string, role: string, hotelId?: string) {
+  async getAllHotels(userId: string, role: string, hotelId?: string, ownedHotelIds?: string[]) {
     try {
-      if (role === 'admin' || role === 'super_admin') {
+      if (role === 'super_admin') {
         return prisma.hotel.findMany({
           where: hotelId ? { id: hotelId } : {},
+          orderBy: { name: 'asc' },
+        });
+      }
+
+      if (role === 'admin') {
+        const where: any = {};
+        if (hotelId) {
+          where.id = hotelId;
+        } else if (ownedHotelIds && ownedHotelIds.length > 0) {
+          where.id = { in: ownedHotelIds };
+        } else {
+          where.OR = [
+            { adminId: userId },
+            { adminId: null, createdBy: userId },
+          ];
+        }
+
+        return prisma.hotel.findMany({
+          where,
           orderBy: { name: 'asc' },
         });
       }
@@ -134,13 +153,14 @@ export class HotelsService {
   async createHotel(input: CreateHotelInput & {
     hotelUsername?: string;
     hotelPassword?: string;
-  }, userId: string) {
+  }, userId: string, role?: string) {
     const { hotelUsername, hotelPassword, ...hotelData } = input as any;
 
     return prisma.$transaction(async (tx) => {
       const hotel = await tx.hotel.create({
         data: {
           ...hotelData,
+          adminId: role === 'admin' ? userId : (hotelData as any).adminId || null,
           createdBy: userId,
           updatedBy: userId,
         },

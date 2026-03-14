@@ -15,7 +15,7 @@ export class PettyCashController {
 
     async createTxn(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const txn = await pettyCashService.createTxn(req.body, hotelId);
             res.status(201).json({ status: 'success', data: txn });
         } catch (e) { next(e); }

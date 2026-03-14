@@ -28,7 +28,7 @@ router.post('/', validate(createStewardSchema), async (req: AuthRequest, res: Re
         console.log('Body:', req.body);
         console.log('User:', req.user);
 
-        const hotelId = req.user?.hotelId || req.body.hotelId;
+        const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
         console.log('Resolved Hotel ID:', hotelId);
 
         if (!hotelId) throw new Error("Hotel ID is required");
@@ -45,7 +45,7 @@ router.post('/', validate(createStewardSchema), async (req: AuthRequest, res: Re
 // Update steward
 router.put('/:id', validate(updateStewardSchema), async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        const hotelId = req.user?.hotelId || req.body.hotelId;
+        const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
         if (!hotelId) throw new Error("Hotel ID is required");
 
         const steward = await stewardService.updateSteward(req.params.id, hotelId, req.body);

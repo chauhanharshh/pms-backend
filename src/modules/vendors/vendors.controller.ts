@@ -15,7 +15,7 @@ export class VendorsController {
 
     async createVendor(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const vendor = await vendorsService.createVendor(req.body, hotelId);
             res.status(201).json({ status: 'success', data: vendor });
         } catch (e) { next(e); }
@@ -23,7 +23,7 @@ export class VendorsController {
 
     async updateVendor(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.user?.hotelId || req.body.hotelId;
+            const hotelId = req.hotelId || req.user?.hotelId || req.body.hotelId;
             const vendor = await vendorsService.updateVendor(req.params.id, hotelId, req.body);
             res.json({ status: 'success', data: vendor });
         } catch (e) { next(e); }
