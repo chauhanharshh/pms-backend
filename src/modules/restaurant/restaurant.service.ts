@@ -4,6 +4,106 @@ import { Decimal } from '@prisma/client/runtime/library';
 import { calculateRoomTax } from '../../utils/tax';
 
 export class RestaurantService {
+    async getServiceChargeReport(filters: {
+        hotelId?: string;
+        startDate?: string;
+        endDate?: string;
+        stewardName?: string;
+        orderId?: string;
+    }) {
+        const where: any = {
+            isDeleted: false,
+            serviceCharge: { gt: 0 }
+        };
+
+        if (filters.hotelId) {
+            where.hotelId = filters.hotelId;
+        }
+
+        if (filters.startDate || filters.endDate) {
+            where.createdAt = {};
+            if (filters.startDate) {
+                where.createdAt.gte = new Date(`${filters.startDate}T00:00:00.000Z`);
+            }
+            if (filters.endDate) {
+                where.createdAt.lte = new Date(`${filters.endDate}T23:59:59.999Z`);
+            }
+        }
+
+        if (filters.stewardName) {
+            where.stewardName = { contains: filters.stewardName, mode: 'insensitive' };
+        }
+
+        if (filters.orderId) {
+            where.OR = [
+                { orderNumber: { contains: filters.orderId, mode: 'insensitive' } },
+                { id: { equals: filters.orderId } }
+            ];
+        }
+
+        const orders = await prisma.restaurantOrder.findMany({
+            where,
+            select: {
+                id: true,
+                orderNumber: true,
+                createdAt: true,
+                tableNumber: true,
+                room: { select: { roomNumber: true } },
+                stewardId: true,
+                stewardName: true,
+                serviceCharge: true,
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        const detailed = orders.map((o) => ({
+            stewardId: o.stewardId || null,
+            stewardName: o.stewardName || 'Unassigned',
+            orderId: o.id,
+            orderNumber: o.orderNumber,
+            date: o.createdAt,
+            tableOrRoom: o.tableNumber ? `Table ${o.tableNumber}` : (o.room?.roomNumber ? `Room ${o.room.roomNumber}` : 'N/A'),
+            serviceChargeAmount: Number(o.serviceCharge || 0),
+        }));
+
+        const grouped = new Map<string, { stewardId?: string | null; stewardName: string; totalServiceCharge: number; orderCount: number }>();
+
+        for (const row of detailed) {
+            const key = row.stewardId || row.stewardName;
+            const existing = grouped.get(key);
+            if (existing) {
+                existing.totalServiceCharge += row.serviceChargeAmount;
+                existing.orderCount += 1;
+            } else {
+                grouped.set(key, {
+                    stewardId: row.stewardId,
+                    stewardName: row.stewardName,
+                    totalServiceCharge: row.serviceChargeAmount,
+                    orderCount: 1,
+                });
+            }
+        }
+
+        const summary = Array.from(grouped.values())
+            .sort((a, b) => b.totalServiceCharge - a.totalServiceCharge)
+            .map((s) => ({
+                ...s,
+                totalServiceCharge: Number(s.totalServiceCharge.toFixed(2)),
+            }));
+
+        const grandTotal = Number(detailed.reduce((sum, row) => sum + row.serviceChargeAmount, 0).toFixed(2));
+
+        return {
+            detailed,
+            summary,
+            totals: {
+                grandTotal,
+                totalOrders: detailed.length,
+                totalStewards: summary.length,
+            }
+        };
+    }
+
     // ── CATEGORIES ──
     async getCategories(hotelId?: string) {
         return prisma.restaurantCategory.findMany({

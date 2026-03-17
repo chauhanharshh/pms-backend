@@ -23,6 +23,7 @@ router.delete('/menu/:id', restaurantController.deleteMenuItem.bind(restaurantCo
 
 // Orders
 router.get('/orders', restaurantController.getOrders.bind(restaurantController));
+router.get('/service-charge-report', restaurantController.getServiceChargeReport.bind(restaurantController));
 router.post('/orders', restaurantController.createOrder.bind(restaurantController));
 router.put('/orders/:id', restaurantController.updateOrder.bind(restaurantController));
 router.patch('/orders/:id/status', restaurantController.updateOrderStatus.bind(restaurantController));

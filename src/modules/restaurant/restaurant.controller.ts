@@ -120,6 +120,23 @@ export class RestaurantController {
         }
     }
 
+    async getServiceChargeReport(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const hotelId = await this.getAuthorizedHotelId(req, 'query');
+            const report = await restaurantService.getServiceChargeReport({
+                hotelId,
+                startDate: req.query.startDate as string,
+                endDate: req.query.endDate as string,
+                stewardName: req.query.stewardName as string,
+                orderId: req.query.orderId as string,
+            });
+
+            res.json({ status: 'success', data: report });
+        } catch (e) {
+            next(e);
+        }
+    }
+
     async createOrder(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = req.hotelId || req.body.hotelId;
