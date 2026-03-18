@@ -750,6 +750,7 @@ export class RestaurantService {
                 return (tx.restaurantKOT as any).update({
                     where: { id: kotId },
                     data: {
+                        ...(data.status && { status: data.status }),
                         items: items.map(i => ({
                             menuItemId: i.menuItemId,
                             itemName: i.itemName,
@@ -757,6 +758,11 @@ export class RestaurantService {
                             price: i.price
                         })) as any
                     } as any
+                });
+            } else if (data.status) {
+                return (tx.restaurantKOT as any).update({
+                    where: { id: kotId },
+                    data: { status: data.status }
                 });
             }
 
