@@ -682,6 +682,176 @@ export class RestaurantService {
         });
     }
 
+    async generateCombinedInvoiceFromKOTs(data: any, hotelId: string, userId: string) {
+        const requestedKotIds = Array.isArray(data?.kotIds) ? data.kotIds : [];
+        const kotIds = Array.from(new Set(requestedKotIds.map((id: any) => String(id || '').trim()).filter(Boolean)));
+        if (kotIds.length === 0) throw new BadRequestError('Please select at least one KOT');
+
+        const kots = await (prisma.restaurantKOT as any).findMany({
+            where: { id: { in: kotIds }, hotelId, isDeleted: false } as any,
+            include: {
+                order: {
+                    include: {
+                        room: true,
+                        booking: true,
+                    }
+                }
+            }
+        });
+
+        if (kots.length !== kotIds.length) throw new NotFoundError('One or more selected KOTs were not found');
+        const nonOpenKot = kots.find((k: any) => String(k?.status || '') !== 'OPEN');
+        if (nonOpenKot) throw new BadRequestError('Only OPEN KOTs can be converted to bill');
+
+        const normalize = (value: any) => String(value || '').trim().toLowerCase();
+        const first = kots[0] as any;
+        const seedTable = normalize(first?.order?.tableNumber);
+        const seedRoom = normalize(first?.order?.room?.roomNumber);
+        const sameContext = kots.every((k: any) => {
+            const currentTable = normalize(k?.order?.tableNumber);
+            const currentRoom = normalize(k?.order?.room?.roomNumber);
+            if (seedTable) return currentTable === seedTable;
+            if (seedRoom) return currentRoom === seedRoom;
+            return currentTable === seedTable && currentRoom === seedRoom;
+        });
+        if (!sameContext) {
+            throw new BadRequestError('Please select KOTs from the same room/table to generate a single bill');
+        }
+
+        const mergedMap = new Map<string, any>();
+        for (const kot of kots as any[]) {
+            const items = Array.isArray(kot?.items) ? kot.items : [];
+            for (const rawItem of items) {
+                const quantity = Number(rawItem?.quantity || 0);
+                if (!Number.isFinite(quantity) || quantity <= 0) continue;
+                const price = Number(rawItem?.price || 0);
+                const itemTotal = Number(rawItem?.itemTotal || rawItem?.amount || quantity * price);
+                const menuItemId = String(rawItem?.menuItemId || rawItem?.itemId || '').trim();
+                const itemName = String(rawItem?.itemName || rawItem?.name || 'Item').trim();
+                const key = `${menuItemId || itemName}|${price.toFixed(2)}`;
+                const existing = mergedMap.get(key);
+                if (existing) {
+                    existing.quantity += quantity;
+                    existing.itemTotal += itemTotal;
+                } else {
+                    mergedMap.set(key, {
+                        menuItemId,
+                        itemName,
+                        quantity,
+                        price,
+                        itemTotal,
+                    });
+                }
+            }
+        }
+
+        const mergedItems = Array.from(mergedMap.values());
+        if (mergedItems.length === 0) {
+            throw new BadRequestError('Selected KOTs do not contain billable items');
+        }
+
+        const subtotal = mergedItems.reduce((sum, item) => sum + Number(item.itemTotal || 0), 0);
+        const serviceCharge = subtotal * 0.10;
+        const totalAmount = subtotal + serviceCharge;
+
+        const toMoney = (value: number) => new Decimal((Number(value || 0)).toFixed(2));
+
+        return prisma.$transaction(async (tx) => {
+            const last = await tx.restaurantOrder.findFirst({
+                where: { hotelId },
+                orderBy: { createdAt: 'desc' },
+            });
+            const count = last ? parseInt(String(last.orderNumber || '').split('-').pop() || '0', 10) + 1 : 1;
+            const orderNumber = `ORD-${String(count).padStart(4, '0')}`;
+
+            const baseOrder = first.order || {};
+
+            const combinedOrder = await tx.restaurantOrder.create({
+                data: {
+                    hotelId,
+                    orderNumber,
+                    bookingId: baseOrder.bookingId || null,
+                    roomId: baseOrder.roomId || null,
+                    tableNumber: baseOrder.tableNumber || null,
+                    guestName: baseOrder.guestName || null,
+                    stewardName: baseOrder.stewardName || null,
+                    stewardId: baseOrder.stewardId || null,
+                    subtotal: toMoney(subtotal),
+                    discount: toMoney(0),
+                    gst: toMoney(0),
+                    serviceCharge: toMoney(serviceCharge),
+                    totalAmount: toMoney(totalAmount),
+                    status: 'billed' as any,
+                    billedAt: new Date(),
+                    invoicedAt: new Date(),
+                    issuedAt: new Date(),
+                    issuedBy: userId,
+                    createdBy: userId,
+                    updatedBy: userId,
+                    orderItems: {
+                        create: mergedItems.map((item: any) => ({
+                            menuItemId: item.menuItemId,
+                            quantity: Number(item.quantity || 0),
+                            price: toMoney(Number(item.price || 0)),
+                            itemTotal: toMoney(Number(item.itemTotal || 0)),
+                            specialNote: null,
+                        })),
+                    },
+                },
+                include: {
+                    room: true,
+                    booking: true,
+                    orderItems: { include: { menuItem: true } },
+                },
+            });
+
+            const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+            const invoiceCount = await (tx.invoice as any).count({
+                where: { hotelId, type: 'RESTAURANT', createdAt: { gte: startOfDay } } as any,
+            });
+            const invoiceNumber = `INV-RES-${dateStr}-${(invoiceCount + 1).toString().padStart(4, '0')}`;
+
+            const invoice = await (tx.invoice as any).create({
+                data: {
+                    hotelId,
+                    restaurantOrderId: (combinedOrder as any).id,
+                    invoiceNumber,
+                    subtotal: toMoney(subtotal),
+                    cgst: toMoney(0),
+                    sgst: toMoney(0),
+                    serviceCharge: toMoney(serviceCharge),
+                    totalAmount: toMoney(totalAmount),
+                    status: 'issued',
+                    type: 'RESTAURANT',
+                    source: 'KOT',
+                    createdBy: userId,
+                    updatedBy: userId,
+                } as any,
+                include: {
+                    restaurantOrder: {
+                        include: {
+                            room: true,
+                            booking: true,
+                            orderItems: { include: { menuItem: true } },
+                        }
+                    }
+                }
+            });
+
+            await (tx.restaurantKOT as any).updateMany({
+                where: { id: { in: kotIds }, hotelId } as any,
+                data: {
+                    status: 'CONVERTED',
+                    linkedInvoiceId: (invoice as any).id,
+                } as any,
+            });
+
+            return invoice;
+        });
+    }
+
     async getKOTs(hotelId?: string, status?: string) {
         const where: any = { isDeleted: false };
         if (hotelId) where.hotelId = hotelId;

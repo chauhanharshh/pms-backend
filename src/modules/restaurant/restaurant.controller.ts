@@ -257,4 +257,13 @@ export class RestaurantController {
             res.status(201).json({ status: 'success', data: invoice });
         } catch (e) { next(e); }
     }
+
+    async generateCombinedInvoiceFromKOTs(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const hotelId = (await this.getAuthorizedHotelId(req, 'body')) || req.user?.hotelId;
+            if (!hotelId) throw new BadRequestError('Hotel context is required to generate bill');
+            const invoice = await restaurantService.generateCombinedInvoiceFromKOTs(req.body, hotelId, req.user!.userId);
+            res.status(201).json({ status: 'success', data: invoice });
+        } catch (e) { next(e); }
+    }
 }
