@@ -2,6 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../types';
 import { RestaurantService } from './restaurant.service';
 import prisma from '../../config/database';
+import { BadRequestError } from '../../utils/errors';
 
 const restaurantService = new RestaurantService();
 
@@ -173,7 +174,8 @@ export class RestaurantController {
 
     async generateInvoice(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.hotelId || req.body.hotelId;
+            const hotelId = (await this.getAuthorizedHotelId(req, 'body')) || req.user?.hotelId;
+            if (!hotelId) throw new BadRequestError('Hotel context is required to generate bill');
             const invoice = await restaurantService.generateInvoice(req.params.id, hotelId, req.user!.userId);
             res.status(201).json({ status: 'success', data: invoice });
         } catch (e) { next(e); }
@@ -181,7 +183,8 @@ export class RestaurantController {
 
     async generateKOTAndInvoice(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.hotelId || req.body.hotelId;
+            const hotelId = (await this.getAuthorizedHotelId(req, 'body')) || req.user?.hotelId;
+            if (!hotelId) throw new BadRequestError('Hotel context is required to generate KOT');
             const result = await restaurantService.generateKOTAndInvoice(req.params.id, hotelId, req.user!.userId);
             res.status(201).json({ status: 'success', data: result });
         } catch (e) { next(e); }
@@ -248,7 +251,8 @@ export class RestaurantController {
 
     async convertKOTToInvoice(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = req.hotelId || req.body.hotelId;
+            const hotelId = (await this.getAuthorizedHotelId(req, 'body')) || req.user?.hotelId;
+            if (!hotelId) throw new BadRequestError('Hotel context is required to convert KOT to bill');
             const invoice = await restaurantService.convertToInvoiceFromKOT(req.params.id, hotelId, req.user!.userId);
             res.status(201).json({ status: 'success', data: invoice });
         } catch (e) { next(e); }
