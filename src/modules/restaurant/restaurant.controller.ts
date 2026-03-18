@@ -1,10 +1,12 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../types';
 import { RestaurantService } from './restaurant.service';
+import { RestaurantDayClosingService } from './restaurant-day-closing.service';
 import prisma from '../../config/database';
 import { BadRequestError } from '../../utils/errors';
 
 const restaurantService = new RestaurantService();
+const restaurantDayClosingService = new RestaurantDayClosingService();
 
 export class RestaurantController {
     private async getAuthorizedHotelId(req: AuthRequest, source: 'query' | 'body' = 'query'): Promise<string | undefined> {
@@ -264,6 +266,40 @@ export class RestaurantController {
             if (!hotelId) throw new BadRequestError('Hotel context is required to generate bill');
             const invoice = await restaurantService.generateCombinedInvoiceFromKOTs(req.body, hotelId, req.user!.userId);
             res.status(201).json({ status: 'success', data: invoice });
+        } catch (e) { next(e); }
+    }
+
+    async getRestaurantDayClosingSummary(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const hotelId = (await this.getAuthorizedHotelId(req, 'query')) || req.user?.hotelId;
+            if (!hotelId) throw new BadRequestError('Hotel context is required');
+
+            const date = req.query.date as string | undefined;
+            if (date) {
+                const summary = await restaurantDayClosingService.getSummary(hotelId, date);
+                res.json({ status: 'success', data: summary });
+                return;
+            }
+
+            const fromDate = req.query.fromDate as string | undefined;
+            const toDate = req.query.toDate as string | undefined;
+            const history = await restaurantDayClosingService.getHistory(hotelId, fromDate, toDate);
+            res.json({ status: 'success', data: history });
+        } catch (e) { next(e); }
+    }
+
+    async closeRestaurantDay(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const hotelId = (await this.getAuthorizedHotelId(req, 'body')) || req.user?.hotelId;
+            if (!hotelId) throw new BadRequestError('Hotel context is required');
+
+            const result = await restaurantDayClosingService.closeDay(
+                hotelId,
+                req.body?.date as string | undefined,
+                req.user!.userId,
+            );
+
+            res.status(201).json({ status: 'success', data: result, message: `Restaurant Day Closed Successfully for ${result.date}` });
         } catch (e) { next(e); }
     }
 }

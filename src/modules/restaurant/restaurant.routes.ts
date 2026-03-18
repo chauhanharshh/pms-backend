@@ -36,6 +36,8 @@ router.get('/checked-in-rooms', restaurantController.getCheckedInRooms.bind(rest
 
 // KOTs (New Section)
 router.get('/kots', restaurantController.getKOTs.bind(restaurantController));
+router.get('/day-closing', restaurantController.getRestaurantDayClosingSummary.bind(restaurantController));
+router.post('/day-closing', restaurantController.closeRestaurantDay.bind(restaurantController));
 router.post('/kots/invoice/combined', restaurantController.generateCombinedInvoiceFromKOTs.bind(restaurantController));
 router.put('/kots/:id', restaurantController.updateKOT.bind(restaurantController));
 router.delete('/kots/:id', restaurantController.deleteKOT.bind(restaurantController));

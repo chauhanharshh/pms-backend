@@ -51,6 +51,7 @@ model Hotel {
   paymentVouchers      PaymentVoucher[]
   pettyCash            PettyCash[]
   restaurantCategories RestaurantCategory[]
+  restaurantDayClosings RestaurantDayClosing[]
   restaurantKots       RestaurantKOT[]
   restaurantMenu       RestaurantMenu[]
   restaurantOrders     RestaurantOrder[]
@@ -194,6 +195,7 @@ model User {
   createdBy    String?      @db.Uuid
   updatedBy    String?      @db.Uuid
   dayClosings  DayClosing[]
+  restaurantDayClosings RestaurantDayClosing[]
   hotel        Hotel?       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
   @@index([username])
@@ -599,6 +601,29 @@ model DayClosing {
   @@map("day_closings")
 }
 
+model RestaurantDayClosing {
+  id                  String   @id @default(uuid()) @db.Uuid
+  hotelId             String   @db.Uuid
+  closingDate         DateTime @db.Date
+  totalKots           Int      @default(0)
+  openKots            Int      @default(0)
+  convertedKots       Int      @default(0)
+  cancelledKots       Int      @default(0)
+  totalOrdersAmount   Decimal  @default(0) @db.Decimal(12, 2)
+  serviceChargeAmount Decimal  @default(0) @db.Decimal(12, 2)
+  totalRevenue        Decimal  @default(0) @db.Decimal(12, 2)
+  totalInvoices       Int      @default(0)
+  closedBy            String   @db.Uuid
+  closedAt            DateTime @default(now())
+  createdAt           DateTime @default(now())
+  user                User     @relation(fields: [closedBy], references: [id])
+  hotel               Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@unique([hotelId, closingDate])
+  @@index([hotelId])
+  @@map("restaurant_day_closings")
+}
+
 model HotelSteward {
   id                String            @id @db.Uuid @default(uuid())
   hotelId           String            @db.Uuid
@@ -619,6 +644,7 @@ enum UserRole {
   admin
   hotel_manager
   hotel_user
+  restaurant_staff
 }
 
 enum RoomStatus {
@@ -703,4 +729,5 @@ enum KOTStatus {
   OPEN
   CONVERTED
   CANCELLED
+  CLOSED
 }

@@ -8,6 +8,7 @@ async function ensureSuperAdminEnumValue() {
     DO $$
     BEGIN
         ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'super_admin';
+        ALTER TYPE "UserRole" ADD VALUE IF NOT EXISTS 'restaurant_staff';
     EXCEPTION
         WHEN duplicate_object THEN NULL;
     END $$;
@@ -128,6 +129,32 @@ async function main() {
 
   console.log('✅ Hotel user created:', hotelUser.username);
 
+  // Create restaurant-only staff user for Hotel Suvidha Deluxe
+  const restaurantStaffPassword = await bcrypt.hash('123', 10);
+  const suvidhaHotelId = '3033632b-1036-4855-b266-85901e353cc8';
+
+  const restaurantStaff = await prisma.user.upsert({
+    where: { username: 'k' },
+    update: {
+      passwordHash: restaurantStaffPassword,
+      role: 'restaurant_staff' as any,
+      hotelId: suvidhaHotelId,
+      isActive: true,
+      fullName: 'Restaurant Staff',
+    },
+    create: {
+      username: 'k',
+      passwordHash: restaurantStaffPassword,
+      fullName: 'Restaurant Staff',
+      role: 'restaurant_staff' as any,
+      hotelId: suvidhaHotelId,
+      isActive: true,
+      createdBy: admin.id,
+    },
+  });
+
+  console.log('✅ Restaurant-only user created:', restaurantStaff.username);
+
   // Create room types
   const deluxeType = await prisma.roomType.create({
     data: {
@@ -243,6 +270,9 @@ async function main() {
   console.log('\nFront Desk:');
   console.log('  Username: frontdesk');
   console.log('  Password: user123');
+  console.log('\nRestaurant Staff:');
+  console.log('  Username: k');
+  console.log('  Password: 123');
   console.log('─────────────────────────────────\n');
 }
 
