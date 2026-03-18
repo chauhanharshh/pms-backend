@@ -89,9 +89,9 @@ export class GstReportsService {
                 0 as "roomRentDisc",
                 COALESCE(b."roomCharges", 0) as "roomRent",
                 
-                CASE WHEN COALESCE(i."igst", 0) > 0 THEN 0 ELSE ROUND((COALESCE(b."roomCharges", 0)) * 0.025, 2) END as "cgst",
-                CASE WHEN COALESCE(i."igst", 0) > 0 THEN 0 ELSE ROUND((COALESCE(b."roomCharges", 0)) * 0.025, 2) END as "sgst",
-                CASE WHEN COALESCE(i."igst", 0) > 0 THEN ROUND((COALESCE(b."roomCharges", 0)) * 0.05, 2) ELSE 0 END as "igst",
+                COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."cgst", 2), 0) as "cgst",
+                COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."sgst", 2), 0) as "sgst",
+                COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."igst", 2), 0) as "igst",
                 
                 COALESCE(b."miscCharges", 0) as "otherCharges",
                 ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2) as "otherChargesGst",
@@ -100,9 +100,9 @@ export class GstReportsService {
                 
                 (
                     COALESCE(b."roomCharges", 0) + 
-                    (CASE WHEN COALESCE(i."igst", 0) > 0 THEN 0 ELSE ROUND((COALESCE(b."roomCharges", 0)) * 0.025, 2) END) + 
-                    (CASE WHEN COALESCE(i."igst", 0) > 0 THEN 0 ELSE ROUND((COALESCE(b."roomCharges", 0)) * 0.025, 2) END) + 
-                    (CASE WHEN COALESCE(i."igst", 0) > 0 THEN ROUND((COALESCE(b."roomCharges", 0)) * 0.05, 2) ELSE 0 END) + 
+                    COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."cgst", 2), 0) + 
+                    COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."sgst", 2), 0) + 
+                    COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."igst", 2), 0) + 
                     COALESCE(b."miscCharges", 0) + 
                     COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0)
                     - COALESCE(b."discount", 0)
@@ -110,15 +110,15 @@ export class GstReportsService {
                 ) as "netPayable",
                 
                 CASE WHEN LOWER(i."paymentMethod") = 'cash' THEN 
-                    (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + (CASE WHEN COALESCE(i."igst", 0) > 0 THEN ROUND((COALESCE(b."roomCharges", 0)) * 0.05, 2) ELSE ROUND((COALESCE(b."roomCharges", 0)) * 0.05, 2) END) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0))
+                    (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0))
                 ELSE 0 END as "cash",
                 
                 CASE WHEN LOWER(i."paymentMethod") IN ('card', 'upi', 'bank') THEN 
-                    (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + (CASE WHEN COALESCE(i."igst", 0) > 0 THEN ROUND((COALESCE(b."roomCharges", 0)) * 0.05, 2) ELSE ROUND((COALESCE(b."roomCharges", 0)) * 0.05, 2) END) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0))
+                    (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0))
                 ELSE 0 END as "bank",
                 
                 CASE WHEN LOWER(COALESCE(i."paymentMethod", 'credit')) NOT IN ('cash', 'card', 'upi', 'bank') THEN 
-                    (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + (CASE WHEN COALESCE(i."igst", 0) > 0 THEN ROUND((COALESCE(b."roomCharges", 0)) * 0.05, 2) ELSE ROUND((COALESCE(b."roomCharges", 0)) * 0.05, 2) END) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0))
+                    (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0))
                 ELSE 0 END as "coCr"
             FROM invoices i
             JOIN bills b ON i."billId" = b.id

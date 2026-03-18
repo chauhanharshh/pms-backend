@@ -648,8 +648,21 @@ export class RestaurantService {
                         .plus(totalRestaurantCharges)
                         .plus(new Decimal(bill.miscCharges || 0));
 
-                    const taxAmount = subtotal.minus(new Decimal(bill.discount || 0)).mul(0.12); // Assuming 12% GST for rooms
-                    const totalAmount = subtotal.minus(new Decimal(bill.discount || 0)).plus(taxAmount);
+                    const discountAmount = new Decimal(bill.discount || 0);
+                    const previousSubtotal = new Decimal(
+                        bill.subtotal ||
+                        new Decimal(bill.roomCharges || 0)
+                            .plus(new Decimal(bill.restaurantCharges || 0))
+                            .plus(new Decimal(bill.miscCharges || 0))
+                    );
+                    const previousTaxable = previousSubtotal.minus(discountAmount);
+                    const effectiveTaxRate = previousTaxable.gt(0)
+                        ? new Decimal(bill.taxAmount || 0).div(previousTaxable)
+                        : new Decimal(0);
+
+                    const newTaxable = subtotal.minus(discountAmount);
+                    const taxAmount = newTaxable.mul(effectiveTaxRate);
+                    const totalAmount = newTaxable.plus(taxAmount);
 
                     await (tx.bill as any).update({
                         where: { id: (bill as any).id },
