@@ -276,7 +276,17 @@ export class BookingsService {
     });
   }
 
-  async checkIn(bookingId: string, hotelId: string, userId: string) {
+  async checkIn(
+    bookingId: string,
+    hotelId: string,
+    userId: string,
+    data?: {
+      checkInDate?: string;
+      checkOutDate?: string;
+      checkInTime?: string;
+      checkOutTime?: string;
+    }
+  ) {
     const booking = await prisma.booking.findFirst({
       where: { id: bookingId, hotelId },
       include: { room: true },
@@ -286,10 +296,26 @@ export class BookingsService {
     if (booking.status !== 'confirmed' && booking.status !== 'pending') throw new BadRequestError('Only pending or confirmed bookings can be checked in');
     if (booking.room.status !== 'vacant') throw new BadRequestError('Room is not vacant');
 
+    const parsedCheckInDate = data?.checkInDate ? new Date(data.checkInDate) : null;
+    const parsedCheckOutDate = data?.checkOutDate ? new Date(data.checkOutDate) : null;
+    const resolvedCheckInDate = parsedCheckInDate && !Number.isNaN(parsedCheckInDate.getTime())
+      ? parsedCheckInDate
+      : booking.checkInDate;
+    const resolvedCheckOutDate = parsedCheckOutDate && !Number.isNaN(parsedCheckOutDate.getTime())
+      ? parsedCheckOutDate
+      : booking.checkOutDate;
+
     return prisma.$transaction(async (tx) => {
       const updatedBooking = await tx.booking.update({
         where: { id: bookingId },
-        data: { status: 'checked_in', updatedBy: userId },
+        data: {
+          status: 'checked_in',
+          checkInDate: resolvedCheckInDate,
+          checkOutDate: resolvedCheckOutDate,
+          checkInTime: data?.checkInTime ?? booking.checkInTime,
+          checkOutTime: data?.checkOutTime ?? booking.checkOutTime,
+          updatedBy: userId,
+        },
         include: { room: true, advancePayments: true },
       });
 
@@ -298,8 +324,8 @@ export class BookingsService {
         data: { status: 'occupied', updatedBy: userId },
       });
 
-      const checkIn = new Date(booking.checkInDate);
-      const checkOut = new Date(booking.checkOutDate);
+      const checkIn = new Date(resolvedCheckInDate);
+      const checkOut = new Date(resolvedCheckOutDate);
       const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
       const roomCharges = booking.room.basePrice.mul(nights);
 

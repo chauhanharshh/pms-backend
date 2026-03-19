@@ -71,7 +71,13 @@ export class BookingsController {
   async checkIn(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const result = await bookingsService.checkIn(id, req.hotelId!, req.user!.userId);
+      const { checkInDate, checkOutDate, checkInTime, checkOutTime } = req.body || {};
+      const result = await bookingsService.checkIn(id, req.hotelId!, req.user!.userId, {
+        checkInDate,
+        checkOutDate,
+        checkInTime,
+        checkOutTime,
+      });
       return ResponseHandler.success(res, result, 'Check-in completed successfully');
     } catch (error) {
       next(error);
