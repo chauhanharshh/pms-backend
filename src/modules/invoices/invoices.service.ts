@@ -15,7 +15,16 @@ export class InvoicesService {
                 include: {
                     bill: {
                         include: {
-                            booking: { select: { guestName: true, guestPhone: true, checkInDate: true, checkOutDate: true } },
+                            booking: {
+                                select: {
+                                    guestName: true,
+                                    guestPhone: true,
+                                    checkInDate: true,
+                                    checkInTime: true,
+                                    checkOutDate: true,
+                                    checkOutTime: true,
+                                }
+                            },
                         },
                     },
                     restaurantOrder: {
