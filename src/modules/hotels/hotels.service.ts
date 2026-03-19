@@ -165,7 +165,20 @@ export class HotelsService {
 
       // If POS Boss Mode is enabled for this hotel, allow seeing all hotels
       if ((assignedHotel as any).posBossMode) {
+        const assignedAdminId = (assignedHotel as any).adminId;
+        const assignedCreatedBy = (assignedHotel as any).createdBy;
+
+        if (!assignedAdminId && !assignedCreatedBy) {
+          return [assignedHotel];
+        }
+
         return prisma.hotel.findMany({
+          where: {
+            OR: [
+              ...(assignedAdminId ? [{ adminId: assignedAdminId }] : []),
+              ...(assignedCreatedBy ? [{ adminId: null, createdBy: assignedCreatedBy }] : []),
+            ],
+          },
           orderBy: { name: 'asc' },
         });
       }

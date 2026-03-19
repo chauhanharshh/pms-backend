@@ -10,18 +10,19 @@ const hotelsController = new HotelsController();
 
 // All routes require authentication
 router.use(authenticate);
+router.use(tenantIsolation);
 
 // Get all hotels (with tenant isolation)
-router.get('/', tenantIsolation, hotelsController.getAllHotels.bind(hotelsController));
+router.get('/', hotelsController.getAllHotels.bind(hotelsController));
 
 // Branding
-router.get('/branding', tenantIsolation, hotelsController.getBranding.bind(hotelsController));
-router.put('/branding', tenantIsolation, adminOnly, hotelsController.updateBranding.bind(hotelsController));
-router.post('/branding/logo', tenantIsolation, adminOnly, uploadLogo.single('logo'), hotelsController.uploadBrandingLogo.bind(hotelsController));
+router.get('/branding', hotelsController.getBranding.bind(hotelsController));
+router.put('/branding', adminOnly, hotelsController.updateBranding.bind(hotelsController));
+router.post('/branding/logo', adminOnly, uploadLogo.single('logo'), hotelsController.uploadBrandingLogo.bind(hotelsController));
 
 // Get dashboard stats
-router.get('/stats', tenantIsolation, hotelsController.getStats.bind(hotelsController));
-router.get('/:id/stats', tenantIsolation, hotelsController.getStats.bind(hotelsController));
+router.get('/stats', hotelsController.getStats.bind(hotelsController));
+router.get('/:id/stats', hotelsController.getStats.bind(hotelsController));
 
 // Get hotel by ID
 router.get('/:id', hotelsController.getHotelById.bind(hotelsController));

@@ -22,7 +22,7 @@ router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
 // Create room
 router.post('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-        if (!req.body.hotelId && req.hotelId) {
+        if (req.hotelId) {
             req.body.hotelId = req.hotelId;
         }
         const room = await roomsService.createRoom(req.body, req.user!.userId);

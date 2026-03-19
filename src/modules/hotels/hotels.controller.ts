@@ -5,11 +5,30 @@ import { ResponseHandler } from '../../utils/response';
 import { createHotelSchema, updateHotelSchema } from './hotels.validation';
 import { z } from 'zod';
 import logger from '../../utils/logger';
-import { BadRequestError } from '../../utils/errors';
+import { BadRequestError, ForbiddenError } from '../../utils/errors';
 
 const hotelsService = new HotelsService();
 
 export class HotelsController {
+  private assertHotelAccess(req: AuthRequest, hotelId: string) {
+    const user = req.user!;
+    const role = String(user.role);
+
+    if (role === 'super_admin') return;
+
+    if (role === 'admin') {
+      const ownedHotelIds = req.ownedHotelIds || [];
+      if (!ownedHotelIds.includes(hotelId)) {
+        throw new ForbiddenError('Access denied: hotel does not belong to this admin');
+      }
+      return;
+    }
+
+    if (user.hotelId !== hotelId) {
+      throw new ForbiddenError('Access denied: hotel does not belong to this user');
+    }
+  }
+
   private resolveBrandingHotelId(req: AuthRequest): string {
     const user = req.user!;
     const role = String(user.role);
@@ -22,8 +41,13 @@ export class HotelsController {
     }
 
     if (role === 'admin') {
+      if (req.hotelId) return req.hotelId;
       if (user.hotelId) return user.hotelId;
-      const selected = requested || req.hotelId;
+
+      const selected = requested;
+      if (selected && req.ownedHotelIds && req.ownedHotelIds.length > 0 && !req.ownedHotelIds.includes(selected)) {
+        throw new ForbiddenError('Selected hotel is not accessible for this admin');
+      }
       if (!selected) throw new BadRequestError('hotelId is required for unscoped admin branding actions');
       return selected;
     }
@@ -50,6 +74,7 @@ export class HotelsController {
   async getHotelById(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+      this.assertHotelAccess(req, id);
       const hotel = await hotelsService.getHotelById(id);
       return ResponseHandler.success(res, hotel);
     } catch (error) {
@@ -75,6 +100,7 @@ export class HotelsController {
   async updateHotel(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+      this.assertHotelAccess(req, id);
       logger.info(`Received update request for hotel ${id}`, { body: req.body });
       const input = updateHotelSchema.parse(req.body);
       logger.info(`Parsed input for hotel ${id}`, { input });
@@ -89,6 +115,7 @@ export class HotelsController {
   async deleteHotel(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+      this.assertHotelAccess(req, id);
       await hotelsService.deleteHotel(id);
       return ResponseHandler.success(res, null, 'Hotel deleted successfully');
     } catch (error) {
@@ -99,6 +126,7 @@ export class HotelsController {
   async setCredentials(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+      this.assertHotelAccess(req, id);
       const { username, password } = z.object({
         username: z.string().min(3),
         password: z.string().min(6),
@@ -113,10 +141,12 @@ export class HotelsController {
   async cloneHotel(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
+      this.assertHotelAccess(req, id);
       const { targetHotelId, options } = z.object({
         targetHotelId: z.string().uuid(),
         options: z.any().optional()
       }).parse(req.body);
+      this.assertHotelAccess(req, targetHotelId);
       const hotel = await hotelsService.cloneHotel(id, { targetHotelId, options }, req.user!.userId);
       return ResponseHandler.created(res, hotel, 'Hotel cloned successfully');
     } catch (error) {
@@ -127,6 +157,9 @@ export class HotelsController {
   async getStats(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const hotelId = req.params.id || req.hotelId;
+      if (hotelId) {
+        this.assertHotelAccess(req, hotelId);
+      }
       const stats = await hotelsService.getDashboardStats(hotelId);
       return ResponseHandler.success(res, stats);
     } catch (error) {
