@@ -17,12 +17,22 @@ export class InvoicesService {
                         include: {
                             booking: {
                                 select: {
+                                    id: true,
                                     guestName: true,
                                     guestPhone: true,
                                     checkInDate: true,
                                     checkInTime: true,
                                     checkOutDate: true,
                                     checkOutTime: true,
+                                    companyId: true,
+                                    companyName: true,
+                                    companyGst: true,
+                                    company: {
+                                        select: {
+                                            name: true,
+                                            gstNumber: true,
+                                        }
+                                    },
                                 }
                             },
                         },
