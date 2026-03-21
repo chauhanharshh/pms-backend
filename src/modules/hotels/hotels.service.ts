@@ -574,26 +574,37 @@ export class HotelsService {
   }
 
   async getDashboardStats(hotelId?: string) {
-    if (hotelId) {
-      const [totalRooms, occupiedRooms, vacantRooms] = await Promise.all([
-        prisma.room.count({ where: { hotelId } }),
-        prisma.room.count({ where: { hotelId, status: 'occupied' } }),
-        prisma.room.count({ where: { hotelId, status: 'vacant' } }),
-      ]);
+    const safeCount = async (query: Promise<number>): Promise<number> => {
+      try {
+        return await query;
+      } catch (error) {
+        logger.error('Dashboard count query failed', error);
+        return 0;
+      }
+    };
 
-      return {
-        totalHotels: 1,
-        totalRooms,
-        occupiedRooms,
-        vacantRooms,
-        occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
-      };
-    } else {
+    try {
+      if (hotelId) {
+        const [totalRooms, occupiedRooms, vacantRooms] = await Promise.all([
+          safeCount(prisma.room.count({ where: { hotelId } })),
+          safeCount(prisma.room.count({ where: { hotelId, status: 'occupied' } })),
+          safeCount(prisma.room.count({ where: { hotelId, status: 'vacant' } })),
+        ]);
+
+        return {
+          totalHotels: 1,
+          totalRooms,
+          occupiedRooms,
+          vacantRooms,
+          occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
+        };
+      }
+
       const [totalHotels, totalRooms, occupiedRooms, vacantRooms] = await Promise.all([
-        prisma.hotel.count({ where: { isActive: true } }),
-        prisma.room.count(),
-        prisma.room.count({ where: { status: 'occupied' } }),
-        prisma.room.count({ where: { status: 'vacant' } }),
+        safeCount(prisma.hotel.count({ where: { isActive: true } })),
+        safeCount(prisma.room.count()),
+        safeCount(prisma.room.count({ where: { status: 'occupied' } })),
+        safeCount(prisma.room.count({ where: { status: 'vacant' } })),
       ]);
 
       return {
@@ -602,6 +613,15 @@ export class HotelsService {
         occupiedRooms,
         vacantRooms,
         occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
+      };
+    } catch (error) {
+      logger.error('Dashboard API error in getDashboardStats', error);
+      return {
+        totalHotels: hotelId ? 1 : 0,
+        totalRooms: 0,
+        occupiedRooms: 0,
+        vacantRooms: 0,
+        occupancyRate: 0,
       };
     }
   }
