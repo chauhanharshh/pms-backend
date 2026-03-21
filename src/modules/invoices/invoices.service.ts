@@ -20,6 +20,10 @@ export class InvoicesService {
                                     id: true,
                                     guestName: true,
                                     guestPhone: true,
+                                    addressLine: true,
+                                    plan: true,
+                                    adults: true,
+                                    children: true,
                                     checkInDate: true,
                                     checkInTime: true,
                                     checkOutDate: true,
@@ -69,6 +73,7 @@ export class InvoicesService {
                         booking: {
                             include: {
                                 room: { include: { roomType: true } },
+                                company: true,
                             },
                         },
                     },
