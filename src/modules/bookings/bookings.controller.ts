@@ -7,16 +7,20 @@ const bookingsService = new BookingsService();
 
 export class BookingsController {
   async getBookings(req: AuthRequest, res: Response, next: NextFunction) {
+    const hotelId = req.hotelId!;
+    console.log('GET bookings called with hotelId:', hotelId);
     try {
       const { status, startDate, endDate } = req.query;
       const bookings = await bookingsService.getBookingsByHotel(
-        req.hotelId!,
+        hotelId,
         status as string,
         startDate ? new Date(startDate as string) : undefined,
         endDate ? new Date(endDate as string) : undefined
       );
       return ResponseHandler.success(res, bookings);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Bookings GET error:', error?.message || error);
+      console.error('Stack:', error?.stack);
       next(error);
     }
   }

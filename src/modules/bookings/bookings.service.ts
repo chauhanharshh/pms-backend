@@ -26,11 +26,19 @@ export class BookingsService {
       if (startDate) where.checkInDate.gte = startDate;
       if (endDate) where.checkInDate.lte = endDate;
     }
-    return prisma.booking.findMany({
-      where,
-      include: { room: { include: { roomType: true } }, bill: true },
-      orderBy: { createdAt: 'desc' },
-    });
+
+    try {
+      return await prisma.booking.findMany({
+        where,
+        include: { room: { include: { roomType: true } }, bill: true },
+        orderBy: { createdAt: 'desc' },
+      });
+    } catch (error: any) {
+      console.error('findAll bookings error:', error?.message || error);
+      console.error('findAll bookings stack:', error?.stack);
+      logger.error('getBookingsByHotel failed', error);
+      return [];
+    }
   }
 
   async getBookingById(bookingId: string, hotelId: string) {
