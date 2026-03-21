@@ -81,6 +81,7 @@ export class BookingsService {
 
     const {
       roomId,
+      plan,
       guestName,
       guestPhone,
       guestEmail,
@@ -111,6 +112,7 @@ export class BookingsService {
       data: {
         hotelId,
         roomId,
+        plan: plan || null,
         guestName,
         guestPhone,
         guestEmail,
@@ -148,6 +150,7 @@ export class BookingsService {
    */
   async walkInCheckIn(data: {
     roomId: string;
+    plan?: string;
     guestName: string;
     guestPhone: string;
     guestEmail?: string;
@@ -199,6 +202,7 @@ export class BookingsService {
         data: {
           hotelId,
           roomId: data.roomId,
+          plan: data.plan || null,
           companyId: data.companyId || undefined,
           companyName: data.companyName || undefined,
           companyGst: data.companyGst || undefined,
@@ -285,6 +289,7 @@ export class BookingsService {
       checkOutDate?: string;
       checkInTime?: string;
       checkOutTime?: string;
+      plan?: string;
     }
   ) {
     const booking = await prisma.booking.findFirst({
@@ -314,6 +319,7 @@ export class BookingsService {
           checkOutDate: resolvedCheckOutDate,
           checkInTime: data?.checkInTime ?? booking.checkInTime,
           checkOutTime: data?.checkOutTime ?? booking.checkOutTime,
+          plan: data?.plan ?? booking.plan,
           updatedBy: userId,
         },
         include: { room: true, advancePayments: true },

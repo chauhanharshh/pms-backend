@@ -253,6 +253,7 @@ model Booking {
   id               String            @id @default(uuid()) @db.Uuid
   hotelId          String            @db.Uuid
   roomId           String            @db.Uuid
+  plan             String?           @default("EP")
   guestName        String            @db.VarChar(255)
   guestPhone       String            @db.VarChar(20)
   guestEmail       String?           @db.VarChar(255)
