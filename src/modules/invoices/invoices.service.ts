@@ -24,9 +24,16 @@ export class InvoicesService {
                                     checkInTime: true,
                                     checkOutDate: true,
                                     checkOutTime: true,
+                                    roomId: true,
                                     companyId: true,
                                     companyName: true,
                                     companyGst: true,
+                                    room: {
+                                        select: {
+                                            id: true,
+                                            roomNumber: true,
+                                        }
+                                    },
                                     company: {
                                         select: {
                                             name: true,
