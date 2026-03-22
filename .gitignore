@@ -12,6 +12,8 @@ build/
 .env
 .env.local
 .env.production
+.env.development
+.env.test
 
 # Logs
 logs/
@@ -36,6 +38,7 @@ Thumbs.db
 backups/
 *.sql
 *.sql.gz
+*.dump
 
 # Test coverage
 coverage/
