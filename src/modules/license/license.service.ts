@@ -385,14 +385,18 @@ export class LicenseService {
     };
   }
 
-  async activateLicense(input: ActivateLicenseInput) {
+  async activateLicense(input: ActivateLicenseInput & { adminId?: string }) {
     await this.ensureTables();
 
     const key = input.licenseKey?.trim();
     if (!key) throw new BadRequestError('licenseKey is required');
 
+    // Require adminId for all activations
+    const adminId = input.adminId || input.userId;
+    if (!adminId) throw new BadRequestError('adminId is required');
+
     const [license] = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."hotelId", l."licenseKey", l."status", l."expiryDate", h."name" AS "hotelName"
+      SELECT l."id", l."hotelId", l."adminId", l."licenseKey", l."status", l."expiryDate", h."name" AS "hotelName"
       FROM "licenses" l
       JOIN "hotels" h ON h."id" = l."hotelId"
       WHERE l."licenseKey" = ${key}
@@ -403,21 +407,8 @@ export class LicenseService {
       throw new BadRequestError('Invalid license key');
     }
 
-    const allowedHotelIds = new Set<string>();
-    if (input.hotelId) {
-      allowedHotelIds.add(input.hotelId);
-    }
-
-    if (input.role === 'admin') {
-      const ownedHotels = await prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "hotels" WHERE "adminId" = ${input.userId}::uuid
-      `;
-      for (const hotel of ownedHotels) {
-        allowedHotelIds.add(hotel.id);
-      }
-    }
-
-    if (!allowedHotelIds.has(license.hotelId)) {
+    // Check license is assigned to this admin
+    if (license.adminId !== adminId) {
       throw new BadRequestError('This license key is not assigned to your account');
     }
 
