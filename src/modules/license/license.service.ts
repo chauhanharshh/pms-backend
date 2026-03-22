@@ -90,7 +90,7 @@ export class LicenseService {
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "licenses" (
         "id" UUID PRIMARY KEY,
-        "hotelId" UUID NOT NULL REFERENCES "hotels"("id") ON DELETE CASCADE,
+        "adminId" UUID NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
         "licenseKey" VARCHAR(64) NOT NULL UNIQUE,
         "planType" VARCHAR(20) NOT NULL,
         "durationMonths" INTEGER NOT NULL,
@@ -102,15 +102,6 @@ export class LicenseService {
         "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
         "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
       );
-    `);
-
-    await prisma.$executeRawUnsafe(`
-      CREATE INDEX IF NOT EXISTS "idx_licenses_hotel" ON "licenses"("hotelId");
-    `);
-
-    await prisma.$executeRawUnsafe(`
-      ALTER TABLE "licenses"
-      ADD COLUMN IF NOT EXISTS "adminId" UUID NULL;
     `);
 
     await prisma.$executeRawUnsafe(`
@@ -165,26 +156,8 @@ export class LicenseService {
     await this.ensureTables();
 
     const resolvedAdminId = input.adminId?.trim() || undefined;
-    let resolvedHotelId = input.hotelId;
-
-    if (!resolvedHotelId && resolvedAdminId) {
-      const [adminHotel] = await prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT "id"
-        FROM "hotels"
-        WHERE "adminId" = ${resolvedAdminId}::uuid
-           OR ("adminId" IS NULL AND "createdBy" = ${resolvedAdminId}::uuid)
-        ORDER BY "createdAt" ASC
-        LIMIT 1
-      `;
-      resolvedHotelId = adminHotel?.id;
-    }
-
-    if (!resolvedHotelId && !resolvedAdminId) {
+    if (!resolvedAdminId) {
       throw new BadRequestError('adminId is required');
-    }
-
-    if (!resolvedHotelId && resolvedAdminId) {
-      throw new BadRequestError('Selected admin has no hotel assigned. Please create hotel first.');
     }
     if (![1, 3, 6, 12].includes(Number(input.durationMonths))) {
       throw new BadRequestError('durationMonths must be one of 1, 3, 6, 12');
@@ -210,17 +183,16 @@ export class LicenseService {
 
     await prisma.$executeRaw`
       INSERT INTO "licenses"
-      ("id", "hotelId", "adminId", "licenseKey", "planType", "durationMonths", "amount", "startDate", "expiryDate", "status", "createdBy", "updatedAt")
+      ("id", "adminId", "licenseKey", "planType", "durationMonths", "amount", "startDate", "expiryDate", "status", "createdBy", "updatedAt")
       VALUES
-      (${id}::uuid, ${resolvedHotelId}::uuid, ${resolvedAdminId ?? null}::uuid, ${key}, ${input.planType}, ${Number(input.durationMonths)}, ${Number(input.amount)}, ${startDate}, ${expiryDate}, ${computed.status}, ${createdBy ?? null}::uuid, NOW())
+      (${id}::uuid, ${resolvedAdminId}::uuid, ${key}, ${input.planType}, ${Number(input.durationMonths)}, ${Number(input.amount)}, ${startDate}, ${expiryDate}, ${computed.status}, ${createdBy ?? null}::uuid, NOW())
     `;
 
     const [created] = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."hotelId", h."name" AS "hotelName", u."fullName" AS "adminName", u."username" AS "adminUsername", l."licenseKey", l."planType", l."durationMonths", l."amount",
+      SELECT l."id", l."adminId", u."fullName" AS "adminName", u."username" AS "adminUsername", l."licenseKey", l."planType", l."durationMonths", l."amount",
              l."startDate", l."expiryDate", l."status", l."createdAt", l."updatedAt"
       FROM "licenses" l
-      JOIN "hotels" h ON h."id" = l."hotelId"
-      LEFT JOIN "users" u ON u."id" = COALESCE(l."adminId", h."adminId", h."createdBy")
+      LEFT JOIN "users" u ON u."id" = l."adminId"
       WHERE l."id" = ${id}::uuid
       LIMIT 1
     `;
@@ -235,14 +207,13 @@ export class LicenseService {
     await this.ensureTables();
 
     const rows = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."hotelId", h."name" AS "hotelName", u."fullName" AS "adminName", u."username" AS "adminUsername", l."licenseKey", l."planType", l."durationMonths", l."amount",
+      SELECT l."id", l."adminId", u."fullName" AS "adminName", u."username" AS "adminUsername", l."licenseKey", l."planType", l."durationMonths", l."amount",
              l."startDate", l."expiryDate", l."status", l."createdAt", l."updatedAt",
              COALESCE(COUNT(d."id"), 0)::int AS "devices"
       FROM "licenses" l
-      JOIN "hotels" h ON h."id" = l."hotelId"
-      LEFT JOIN "users" u ON u."id" = COALESCE(l."adminId", h."adminId", h."createdBy")
+      LEFT JOIN "users" u ON u."id" = l."adminId"
       LEFT JOIN "license_devices" d ON d."licenseId" = l."id"
-      GROUP BY l."id", h."name", u."fullName", u."username"
+      GROUP BY l."id", u."fullName", u."username"
       ORDER BY l."createdAt" DESC
     `;
 
@@ -298,9 +269,9 @@ export class LicenseService {
 
     await prisma.$executeRaw`
       INSERT INTO "license_payments"
-      ("id", "licenseId", "hotelId", "amount", "method", "notes", "extendedFrom", "extendedTo")
+      ("id", "licenseId", "amount", "method", "notes", "extendedFrom", "extendedTo")
       VALUES
-      (${randomUUID()}::uuid, ${input.licenseId}::uuid, ${license.hotelId}::uuid, ${Number(input.amount)}, ${input.paymentMethod}, ${input.notes ?? null}, ${currentExpiry}, ${newExpiry})
+      (${randomUUID()}::uuid, ${input.licenseId}::uuid, ${Number(input.amount)}, ${input.paymentMethod}, ${input.notes ?? null}, ${currentExpiry}, ${newExpiry})
     `;
 
     const [updated] = await prisma.$queryRaw<Array<any>>`
@@ -346,9 +317,8 @@ export class LicenseService {
     if (!input.licenseKey?.trim()) throw new BadRequestError('licenseKey is required');
 
     const [license] = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."hotelId", h."name" AS "hotelName", l."licenseKey", l."planType", l."startDate", l."expiryDate"
+      SELECT l."id", l."adminId", l."licenseKey", l."planType", l."startDate", l."expiryDate"
       FROM "licenses" l
-      JOIN "hotels" h ON h."id" = l."hotelId"
       WHERE l."licenseKey" = ${input.licenseKey.trim()}
       LIMIT 1
     `;
@@ -378,8 +348,7 @@ export class LicenseService {
       status: computed.status,
       statusLabel: statusLabel(computed.status),
       daysLeft: computed.daysLeft,
-      hotelId: license.hotelId,
-      hotelName: license.hotelName,
+      adminId: license.adminId,
       planType: license.planType,
       expiryDate: license.expiryDate,
     };
@@ -396,9 +365,8 @@ export class LicenseService {
     if (!adminId) throw new BadRequestError('adminId is required');
 
     const [license] = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."hotelId", l."adminId", l."licenseKey", l."status", l."expiryDate", h."name" AS "hotelName"
+      SELECT l."id", l."adminId", l."licenseKey", l."status", l."expiryDate"
       FROM "licenses" l
-      JOIN "hotels" h ON h."id" = l."hotelId"
       WHERE l."licenseKey" = ${key}
       LIMIT 1
     `;
@@ -427,8 +395,7 @@ export class LicenseService {
       status: computed.status,
       statusLabel: statusLabel(computed.status),
       expiryDate: license.expiryDate,
-      hotelId: license.hotelId,
-      hotelName: license.hotelName,
+      adminId: license.adminId,
     };
   }
 }
