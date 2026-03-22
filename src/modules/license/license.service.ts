@@ -4,7 +4,8 @@ import { BadRequestError, NotFoundError } from '../../utils/errors';
 import { UserRole } from '@prisma/client';
 
 type CreateLicenseInput = {
-  hotelId: string;
+  hotelId?: string;
+  adminId?: string;
   planType: 'monthly' | 'annual';
   durationMonths: number;
   amount: number;
@@ -108,6 +109,15 @@ export class LicenseService {
     `);
 
     await prisma.$executeRawUnsafe(`
+      ALTER TABLE "licenses"
+      ADD COLUMN IF NOT EXISTS "adminId" UUID NULL;
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE INDEX IF NOT EXISTS "idx_licenses_admin" ON "licenses"("adminId");
+    `);
+
+    await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "license_devices" (
         "id" UUID PRIMARY KEY,
         "licenseId" UUID NOT NULL REFERENCES "licenses"("id") ON DELETE CASCADE,
@@ -154,7 +164,28 @@ export class LicenseService {
   async createLicense(input: CreateLicenseInput, createdBy?: string) {
     await this.ensureTables();
 
-    if (!input.hotelId) throw new BadRequestError('hotelId is required');
+    const resolvedAdminId = input.adminId?.trim() || undefined;
+    let resolvedHotelId = input.hotelId;
+
+    if (!resolvedHotelId && resolvedAdminId) {
+      const [adminHotel] = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT "id"
+        FROM "hotels"
+        WHERE "adminId" = ${resolvedAdminId}::uuid
+           OR ("adminId" IS NULL AND "createdBy" = ${resolvedAdminId}::uuid)
+        ORDER BY "createdAt" ASC
+        LIMIT 1
+      `;
+      resolvedHotelId = adminHotel?.id;
+    }
+
+    if (!resolvedHotelId && !resolvedAdminId) {
+      throw new BadRequestError('adminId is required');
+    }
+
+    if (!resolvedHotelId && resolvedAdminId) {
+      throw new BadRequestError('Selected admin has no hotel assigned. Please create hotel first.');
+    }
     if (![1, 3, 6, 12].includes(Number(input.durationMonths))) {
       throw new BadRequestError('durationMonths must be one of 1, 3, 6, 12');
     }
@@ -179,16 +210,17 @@ export class LicenseService {
 
     await prisma.$executeRaw`
       INSERT INTO "licenses"
-      ("id", "hotelId", "licenseKey", "planType", "durationMonths", "amount", "startDate", "expiryDate", "status", "createdBy", "updatedAt")
+      ("id", "hotelId", "adminId", "licenseKey", "planType", "durationMonths", "amount", "startDate", "expiryDate", "status", "createdBy", "updatedAt")
       VALUES
-      (${id}::uuid, ${input.hotelId}::uuid, ${key}, ${input.planType}, ${Number(input.durationMonths)}, ${Number(input.amount)}, ${startDate}, ${expiryDate}, ${computed.status}, ${createdBy ?? null}::uuid, NOW())
+      (${id}::uuid, ${resolvedHotelId}::uuid, ${resolvedAdminId ?? null}::uuid, ${key}, ${input.planType}, ${Number(input.durationMonths)}, ${Number(input.amount)}, ${startDate}, ${expiryDate}, ${computed.status}, ${createdBy ?? null}::uuid, NOW())
     `;
 
     const [created] = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."hotelId", h."name" AS "hotelName", l."licenseKey", l."planType", l."durationMonths", l."amount",
+      SELECT l."id", l."hotelId", h."name" AS "hotelName", u."fullName" AS "adminName", u."username" AS "adminUsername", l."licenseKey", l."planType", l."durationMonths", l."amount",
              l."startDate", l."expiryDate", l."status", l."createdAt", l."updatedAt"
       FROM "licenses" l
       JOIN "hotels" h ON h."id" = l."hotelId"
+      LEFT JOIN "users" u ON u."id" = COALESCE(l."adminId", h."adminId", h."createdBy")
       WHERE l."id" = ${id}::uuid
       LIMIT 1
     `;
@@ -203,13 +235,14 @@ export class LicenseService {
     await this.ensureTables();
 
     const rows = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."hotelId", h."name" AS "hotelName", l."licenseKey", l."planType", l."durationMonths", l."amount",
+      SELECT l."id", l."hotelId", h."name" AS "hotelName", u."fullName" AS "adminName", u."username" AS "adminUsername", l."licenseKey", l."planType", l."durationMonths", l."amount",
              l."startDate", l."expiryDate", l."status", l."createdAt", l."updatedAt",
              COALESCE(COUNT(d."id"), 0)::int AS "devices"
       FROM "licenses" l
       JOIN "hotels" h ON h."id" = l."hotelId"
+      LEFT JOIN "users" u ON u."id" = COALESCE(l."adminId", h."adminId", h."createdBy")
       LEFT JOIN "license_devices" d ON d."licenseId" = l."id"
-      GROUP BY l."id", h."name"
+      GROUP BY l."id", h."name", u."fullName", u."username"
       ORDER BY l."createdAt" DESC
     `;
 

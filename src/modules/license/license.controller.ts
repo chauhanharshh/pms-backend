@@ -10,8 +10,9 @@ export class LicenseController {
       const data = await service.createLicense(
         {
           hotelId: req.body.hotelId,
-          planType: req.body.planType,
-          durationMonths: Number(req.body.durationMonths),
+          adminId: req.body.adminId,
+          planType: (req.body.planType || req.body.plan || 'monthly') as 'monthly' | 'annual',
+          durationMonths: Number(req.body.durationMonths ?? req.body.duration),
           amount: Number(req.body.amount || 0),
           startDate: req.body.startDate,
         },
