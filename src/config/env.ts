@@ -10,6 +10,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string(),
   JWT_SECRET: z.string(),
   JWT_EXPIRES_IN: z.string().default('7d'),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
   CORS_ORIGIN: z.string().default(
     'http://localhost:5173,http://localhost:3000,https://pms-frontend-sigma-gilt.vercel.app,https://*.vercel.app',
   ),
@@ -33,6 +35,10 @@ export const config = {
   jwt: {
     secret: parsedEnv.data.JWT_SECRET,
     expiresIn: parsedEnv.data.JWT_EXPIRES_IN,
+  },
+  google: {
+    clientId: parsedEnv.data.GOOGLE_CLIENT_ID || '',
+    clientSecret: parsedEnv.data.GOOGLE_CLIENT_SECRET || '',
   },
   cors: {
     origin: parsedEnv.data.CORS_ORIGIN,

@@ -32,6 +32,7 @@ import stewardsRoutes from './modules/stewards/steward.routes';
 import pettyCashRoutes from './modules/petty-cash/petty-cash.routes';
 import liabilitiesRoutes from './modules/liabilities/liabilities.routes';
 import dayClosingRoutes from './modules/day-closing/day-closing.routes';
+import licenseRoutes from './modules/license/license.routes';
 
 const app: Application = express();
 
@@ -132,6 +133,7 @@ app.use('/api/v1/petty-cash', pettyCashRoutes);
 app.use('/api/v1/liabilities', liabilitiesRoutes);
 app.use('/api/v1/day-closing', dayClosingRoutes);
 app.use('/api/v1/stewards', stewardsRoutes);
+app.use('/api/v1/license', licenseRoutes);
 
 // 404 handler
 app.use('*', (req, res) => {
@@ -171,6 +173,11 @@ const startServer = async () => {
       ADD COLUMN IF NOT EXISTS "brandName" VARCHAR(255),
       ADD COLUMN IF NOT EXISTS "logoUrl" VARCHAR(500),
       ADD COLUMN IF NOT EXISTS "adminId" UUID;
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      ALTER TABLE "users"
+      ADD COLUMN IF NOT EXISTS "maxHotels" INTEGER NOT NULL DEFAULT 1;
     `);
 
     await prisma.$executeRawUnsafe(`

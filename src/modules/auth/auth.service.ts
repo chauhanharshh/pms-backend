@@ -1,11 +1,42 @@
 import bcrypt from 'bcrypt';
 import prisma from '../../config/database';
 import { JwtUtil } from '../../utils/jwt';
-import { UnauthorizedError, BadRequestError } from '../../utils/errors';
-import { LoginInput } from './auth.validation';
+import { UnauthorizedError, BadRequestError, ConflictError } from '../../utils/errors';
+import { LoginInput, RegisterInput } from './auth.validation';
 import logger from '../../utils/logger';
+import { OAuth2Client } from 'google-auth-library';
+import { config } from '../../config/env';
 
 export class AuthService {
+  private toAuthPayload(user: any) {
+    const token = JwtUtil.sign({
+      userId: user.id,
+      hotelId: user.hotelId || undefined,
+      role: user.role,
+    });
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        maxHotels: Number((user as any).maxHotels || 1),
+        hotelId: user.hotelId,
+        hotel: user.hotel
+          ? {
+              id: user.hotel.id,
+              name: user.hotel.name,
+              brandName: (user.hotel as any).brandName || null,
+              logoUrl: (user.hotel as any).logoUrl || null,
+            }
+          : null,
+      },
+    };
+  }
+
   async getBrandingByUsername(username?: string) {
     const cleanUsername = (username || '').trim();
     if (!cleanUsername) {
@@ -111,29 +142,7 @@ export class AuthService {
         throw new UnauthorizedError('Hotel is deactivated');
       }
 
-      const token = JwtUtil.sign({
-        userId: user.id,
-        hotelId: user.hotelId || undefined,
-        role: user.role,
-      });
-
-      return {
-        token,
-        user: {
-          id: user.id,
-          username: user.username,
-          fullName: user.fullName,
-          email: user.email,
-          role: user.role,
-          hotelId: user.hotelId,
-          hotel: user.hotel ? {
-            id: user.hotel.id,
-            name: user.hotel.name,
-            brandName: (user.hotel as any).brandName || null,
-            logoUrl: (user.hotel as any).logoUrl || null,
-          } : null,
-        },
-      };
+      return this.toAuthPayload(user);
     } catch (error: any) {
       if (error instanceof UnauthorizedError || error instanceof BadRequestError) {
         throw error;
@@ -141,6 +150,88 @@ export class AuthService {
       const msg = error instanceof Error ? error.message : String(error);
       throw new UnauthorizedError(`Login failed: ${msg}`);
     }
+  }
+
+  async register(input: RegisterInput) {
+    const existing = await prisma.user.findFirst({
+      where: {
+        OR: [{ username: input.username }, { email: input.email }],
+      },
+    });
+
+    if (existing) {
+      throw new ConflictError('Username or email already exists');
+    }
+
+    const passwordHash = await bcrypt.hash(input.password, 10);
+
+    const hotel = await prisma.hotel.create({
+      data: {
+        name: input.hotelName,
+        isActive: true,
+      },
+    });
+
+    const user = await prisma.user.create({
+      data: {
+        fullName: input.fullName,
+        email: input.email,
+        username: input.username,
+        passwordHash,
+        role: 'hotel_manager',
+        hotelId: hotel.id,
+        isActive: false,
+      },
+    });
+
+    return {
+      id: user.id,
+      username: user.username,
+      fullName: user.fullName,
+      email: user.email,
+      role: user.role,
+      hotelId: user.hotelId,
+      hotelName: hotel.name,
+      approvalStatus: 'pending',
+    };
+  }
+
+  async googleLogin(credential: string) {
+    if (!config.google.clientId) {
+      throw new BadRequestError('Google login is not configured');
+    }
+
+    const client = new OAuth2Client(config.google.clientId);
+    const ticket = await client.verifyIdToken({
+      idToken: credential,
+      audience: config.google.clientId,
+    });
+
+    const payload = ticket.getPayload();
+    const email = payload?.email;
+
+    if (!email) {
+      throw new UnauthorizedError('Google account email not available');
+    }
+
+    const user = await prisma.user.findFirst({
+      where: { email },
+      include: { hotel: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedError('No account found with this Google email');
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedError('Account is deactivated');
+    }
+
+    if (user.hotelId && user.hotel && !user.hotel.isActive) {
+      throw new UnauthorizedError('Hotel is deactivated');
+    }
+
+    return this.toAuthPayload(user);
   }
 
   async getProfile(userId: string) {
@@ -153,6 +244,7 @@ export class AuthService {
         email: true,
         phone: true,
         role: true,
+        maxHotels: true,
         hotelId: true,
         hotel: {
           select: {

@@ -7,6 +7,32 @@ export class UsersService {
     return role === 'admin' || role === 'super_admin';
   }
 
+  private resolveMaxHotels(value: unknown, fallback = 1) {
+    if (value == null || value === '') return fallback;
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 1) {
+      throw new BadRequestError('maxHotels must be an integer greater than or equal to 1');
+    }
+    return parsed;
+  }
+
+  private async mapAdminAccount(user: any) {
+    const hotelsCount = await prisma.hotel.count({
+      where: {
+        OR: [
+          { adminId: user.id },
+          { adminId: null, createdBy: user.id },
+        ],
+      },
+    });
+
+    return {
+      ...user,
+      maxHotels: Number((user as any).maxHotels || 1),
+      hotelsCount,
+    };
+  }
+
   async getUsersByHotel(hotelId?: string) {
     const where: any = {};
     if (hotelId) where.hotelId = hotelId;
@@ -117,7 +143,7 @@ export class UsersService {
   }
 
   async getAdminAccounts() {
-    return prisma.user.findMany({
+    const admins = await prisma.user.findMany({
       where: { role: 'admin' },
       select: {
         id: true,
@@ -125,6 +151,7 @@ export class UsersService {
         fullName: true,
         email: true,
         phone: true,
+        maxHotels: true,
         role: true,
         isActive: true,
         createdAt: true,
@@ -132,6 +159,8 @@ export class UsersService {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    return Promise.all(admins.map((admin) => this.mapAdminAccount(admin)));
   }
 
   async createAdminAccount(data: any, requestingUserId: string) {
@@ -139,31 +168,37 @@ export class UsersService {
     if (existing) throw new BadRequestError('Username already exists');
     if (!data.password) throw new BadRequestError('Password is required');
 
+    const maxHotels = this.resolveMaxHotels(data.maxHotels, 1);
+
     const passwordHash = await bcrypt.hash(data.password, 10);
-    return prisma.user.create({
+    const created = await prisma.user.create({
       data: {
         username: data.username,
         passwordHash,
         fullName: data.fullName,
         email: data.email,
         phone: data.phone,
+        maxHotels,
         role: 'admin',
         isActive: data.isActive ?? true,
         createdBy: requestingUserId,
         updatedBy: requestingUserId,
-      },
+      } as any,
       select: {
         id: true,
         username: true,
         fullName: true,
         email: true,
         phone: true,
+        maxHotels: true,
         role: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
       },
     });
+
+    return this.mapAdminAccount(created);
   }
 
   async updateAdminAccount(userId: string, data: any, requestingUserId: string) {
@@ -179,13 +214,17 @@ export class UsersService {
       updatedBy: requestingUserId,
     };
 
+    if (data.maxHotels !== undefined) {
+      updateData.maxHotels = this.resolveMaxHotels(data.maxHotels, Number((user as any).maxHotels || 1));
+    }
+
     if (data.username && data.username !== user.username) {
       const usernameExists = await prisma.user.findUnique({ where: { username: data.username } });
       if (usernameExists) throw new BadRequestError('Username already exists');
       updateData.username = data.username;
     }
 
-    return prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: userId },
       data: updateData,
       select: {
@@ -194,12 +233,15 @@ export class UsersService {
         fullName: true,
         email: true,
         phone: true,
+        maxHotels: true,
         role: true,
         isActive: true,
         createdAt: true,
         updatedAt: true,
       },
     });
+
+    return this.mapAdminAccount(updated);
   }
 
   async deleteAdminAccount(userId: string) {
@@ -221,7 +263,7 @@ export class UsersService {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    return prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: userId },
       data: {
         passwordHash,
@@ -233,11 +275,14 @@ export class UsersService {
         fullName: true,
         email: true,
         phone: true,
+        maxHotels: true,
         role: true,
         isActive: true,
         updatedAt: true,
       },
     });
+
+    return this.mapAdminAccount(updated);
   }
 
   async setAdminStatus(userId: string, isActive: boolean, requestingUserId: string) {
@@ -245,7 +290,7 @@ export class UsersService {
     if (!user) throw new NotFoundError('User not found');
     if (user.role !== 'admin') throw new BadRequestError('Status update is only supported for admin accounts');
 
-    return prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: userId },
       data: {
         isActive,
@@ -257,10 +302,13 @@ export class UsersService {
         fullName: true,
         email: true,
         phone: true,
+        maxHotels: true,
         role: true,
         isActive: true,
         updatedAt: true,
       },
     });
+
+    return this.mapAdminAccount(updated);
   }
 }

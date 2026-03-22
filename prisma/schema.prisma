@@ -188,6 +188,7 @@ model User {
   fullName     String       @db.VarChar(255)
   email        String?      @db.VarChar(255)
   phone        String?      @db.VarChar(20)
+  maxHotels    Int          @default(1)
   role         UserRole
   isActive     Boolean      @default(true)
   createdAt    DateTime     @default(now())

@@ -1,7 +1,7 @@
 import prisma from '../../config/database';
 import { MENU_DATA } from '../../constants/menuData';
 import { CreateHotelInput, UpdateHotelInput } from './hotels.validation';
-import { NotFoundError, ForbiddenError } from '../../utils/errors';
+import { NotFoundError, ForbiddenError, BadRequestError } from '../../utils/errors';
 import logger from '../../utils/logger';
 import bcrypt from 'bcrypt';
 import fs from 'fs';
@@ -217,6 +217,33 @@ export class HotelsService {
     hotelPassword?: string;
   }, userId: string, role?: string) {
     const { hotelUsername, hotelPassword, ...hotelData } = input as any;
+
+    if (role === 'admin') {
+      const admin = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, maxHotels: true } as any,
+      });
+
+      if (!admin) {
+        throw new NotFoundError('Admin account not found');
+      }
+
+      const adminMaxHotels = Math.max(1, Number((admin as any).maxHotels || 1));
+      const existingHotels = await prisma.hotel.count({
+        where: {
+          OR: [
+            { adminId: userId },
+            { adminId: null, createdBy: userId },
+          ],
+        },
+      });
+
+      if (existingHotels >= adminMaxHotels) {
+        throw new BadRequestError(
+          `Hotel creation limit reached. You can only create ${adminMaxHotels} hotel(s). Contact support to increase your limit.`
+        );
+      }
+    }
 
     return prisma.$transaction(async (tx) => {
       const hotel = await tx.hotel.create({

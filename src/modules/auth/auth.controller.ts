@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from '../../types';
 import { AuthService } from './auth.service';
 import { ResponseHandler } from '../../utils/response';
-import { loginSchema } from './auth.validation';
+import { googleLoginSchema, loginSchema, registerSchema } from './auth.validation';
 
 const authService = new AuthService();
 
@@ -21,6 +21,26 @@ export class AuthController {
     try {
       const input = loginSchema.parse(req.body);
       const result = await authService.login(input);
+      return ResponseHandler.success(res, result, 'Login successful');
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async register(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const input = registerSchema.parse(req.body);
+      const result = await authService.register(input);
+      return ResponseHandler.success(res, result, 'Registration submitted. Awaiting approval.', 201);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async googleLogin(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const input = googleLoginSchema.parse(req.body);
+      const result = await authService.googleLogin(input.credential);
       return ResponseHandler.success(res, result, 'Login successful');
     } catch (error) {
       next(error);
