@@ -13,6 +13,7 @@
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
     "backup": "node scripts/backup.js",
+    "backup:auto": "node scripts/backup.js && echo Backup done at $(date)",
     "postinstall": "prisma generate && prisma migrate deploy"
   },
   "keywords": [
