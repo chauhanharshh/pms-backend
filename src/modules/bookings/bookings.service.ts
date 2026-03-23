@@ -114,6 +114,7 @@ export class BookingsService {
       checkInTime,
       checkOutTime,
       source,
+      roomPrice,
     } = data;
 
     return prisma.booking.create({
@@ -148,6 +149,7 @@ export class BookingsService {
         remarks,
         checkInTime,
         checkOutTime,
+        roomPrice: roomPrice ? new Decimal(roomPrice.toString()) : null,
       },
       include: { room: { include: { roomType: true } } },
     });
@@ -298,6 +300,7 @@ export class BookingsService {
       checkInTime?: string;
       checkOutTime?: string;
       plan?: string;
+      roomPrice?: number;
     }
   ) {
     const booking = await prisma.booking.findFirst({
@@ -328,6 +331,7 @@ export class BookingsService {
           checkInTime: data?.checkInTime ?? booking.checkInTime,
           checkOutTime: data?.checkOutTime ?? booking.checkOutTime,
           plan: data?.plan ?? booking.plan,
+          roomPrice: data?.roomPrice ? new Decimal(data.roomPrice.toString()) : booking.roomPrice,
           updatedBy: userId,
         },
         include: { room: true, advancePayments: true },
@@ -340,8 +344,9 @@ export class BookingsService {
 
       const checkIn = new Date(resolvedCheckInDate);
       const checkOut = new Date(resolvedCheckOutDate);
-      const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
-      const roomCharges = booking.room.basePrice.mul(nights);
+      const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
+      const basePrice = booking.roomPrice ? new Decimal(booking.roomPrice.toString()) : booking.room.basePrice;
+      const roomCharges = basePrice.mul(nights);
 
       const bill = await tx.bill.create({
         data: {

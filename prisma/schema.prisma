@@ -288,6 +288,7 @@ model Booking {
   vehicleDetails   String?           @db.VarChar(100)
   checkInTime      String?           @db.VarChar(10)
   checkOutTime     String?           @db.VarChar(10)
+  roomPrice        Decimal?          @db.Decimal(10, 2)
   paymentMode      PaymentMethod     @default(cash)
   advancePayments  AdvancePayment[]
   bill             Bill?
