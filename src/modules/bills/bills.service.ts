@@ -13,6 +13,7 @@ export class BillsService {
                         guestName: true, 
                         checkInDate: true, 
                         checkOutDate: true,
+                        roomId: true,
                         miscCharges: { select: { amount: true, quantity: true } },
                         restaurantOrders: { 
                             where: { status: { not: 'cancelled' } },
@@ -25,13 +26,32 @@ export class BillsService {
             orderBy: { createdAt: 'desc' },
         });
 
-        return bills.map((bill: any) => {
-            if (bill.status && bill.status.toLowerCase() !== 'paid' && bill.booking) {
+        return Promise.all(bills.map(async (bill: any) => {
+            if (bill.booking) {
                 const miscTotal = bill.booking.miscCharges?.reduce((sum: number, charge: any) => 
                     sum + (Number(charge.amount) * Number(charge.quantity)), 0) || 0;
                     
-                const restTotal = bill.booking.restaurantOrders?.reduce((sum: number, order: any) => 
+                // Restaurant orders via bookingId
+                const bookingRestTotal = bill.booking.restaurantOrders?.reduce((sum: number, order: any) => 
                     sum + Number(order.totalAmount), 0) || 0;
+
+                // Also fetch restaurant orders linked directly by roomId (no bookingId or separate flow)
+                let roomRestTotal = 0;
+                if (bill.booking.roomId) {
+                    const roomOrders = await prisma.restaurantOrder.findMany({
+                        where: {
+                            hotelId,
+                            roomId: bill.booking.roomId,
+                            bookingId: null,
+                            status: { not: 'cancelled' },
+                            isDeleted: false,
+                        },
+                        select: { totalAmount: true }
+                    });
+                    roomRestTotal = roomOrders.reduce((sum: number, o: any) => sum + Number(o.totalAmount), 0);
+                }
+
+                const restTotal = bookingRestTotal + roomRestTotal;
 
                 return {
                     ...bill,
@@ -40,7 +60,7 @@ export class BillsService {
                 };
             }
             return bill;
-        });
+        }));
     }
 
     async getBillById(billId: string, hotelId: string) {
