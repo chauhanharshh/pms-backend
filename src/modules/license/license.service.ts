@@ -312,8 +312,23 @@ export class LicenseService {
     const key = input.licenseKey?.trim();
     if (!key) throw new BadRequestError('licenseKey is required');
 
-    const adminId = input.adminId || input.userId;
-    if (!adminId) throw new BadRequestError('adminId is required');
+    const user = await (prisma as any).user.findUnique({
+      where: { id: input.userId },
+      include: {
+        hotel: {
+          select: { adminId: true }
+        }
+      }
+    });
+
+    const adminId =
+      user?.role === 'admin' || user?.role === 'hotel_manager'
+        ? user.id                    // they ARE the admin
+        : user?.hotel?.adminId;      // hotel staff → their hotel's admin
+
+    if (!adminId) {
+      throw new BadRequestError('Could not resolve administrator for this account');
+    }
 
     const license = await (prisma as any).license.findUnique({
       where: { licenseKey: key }

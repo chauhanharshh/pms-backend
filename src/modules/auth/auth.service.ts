@@ -29,6 +29,7 @@ export class AuthService {
           ? {
               id: user.hotel.id,
               name: user.hotel.name,
+              adminId: (user.hotel as any).adminId || null,
               brandName: (user.hotel as any).brandName || null,
               logoUrl: (user.hotel as any).logoUrl || null,
             }
