@@ -10,6 +10,7 @@ export class BillsService {
             include: {
                 booking: { 
                     select: { 
+                        id: true,
                         guestName: true, 
                         checkInDate: true, 
                         checkOutDate: true,
