@@ -243,6 +243,7 @@ model Room {
   taxRate          Decimal           @default(12.00) @db.Decimal(5, 2)
   bookings         Booking[]
   restaurantOrders RestaurantOrder[]
+  miscCharges      MiscCharge[]
   hotel            Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   roomType         RoomType          @relation(fields: [typeId], references: [id])
 
@@ -334,6 +335,7 @@ model MiscCharge {
   id               String             @id @default(uuid()) @db.Uuid
   hotelId          String             @db.Uuid
   bookingId        String?            @db.Uuid
+  roomId           String?            @db.Uuid
   category         MiscChargeCategory
   description      String             @db.VarChar(500)
   amount           Decimal            @db.Decimal(10, 2)
@@ -347,9 +349,11 @@ model MiscCharge {
   updatedBy        String?            @db.Uuid
   booking          Booking?           @relation(fields: [bookingId], references: [id])
   hotel            Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  room             Room?              @relation(fields: [roomId], references: [id])
 
   @@index([hotelId])
   @@index([bookingId])
+  @@index([roomId])
   @@map("misc_charges")
 }
 

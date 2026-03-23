@@ -18,8 +18,9 @@ export class MiscChargesService {
         return prisma.miscCharge.create({
             data: {
                 hotelId,
+                roomId: data.roomId || null,
                 bookingId: data.bookingId || null,
-                category: data.category,
+                category: data.category.toLowerCase(), // Fix capitalization mismatch (e.g., 'Laundry' to 'laundry')
                 description: data.description,
                 amount: data.amount,
                 quantity: data.quantity ?? 1,
