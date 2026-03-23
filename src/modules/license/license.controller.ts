@@ -94,4 +94,13 @@ export class LicenseController {
       next(error);
     }
   }
+
+  async checkStaff(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const data = await service.checkStaffLicense(req.body.userId);
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

@@ -363,4 +363,59 @@ export class LicenseService {
       adminId: license.adminId,
     };
   }
+
+  async checkStaffLicense(userId: string) {
+    const user = await (prisma as any).user.findUnique({
+      where: { id: userId },
+      include: {
+        hotel: {
+          select: {
+            id: true,
+            name: true,
+            adminId: true,
+          }
+        }
+      }
+    });
+
+    if (!user?.hotel?.adminId) {
+      return {
+        valid: false,
+        message: 'No hotel or admin found for this account.'
+      };
+    }
+
+    const adminId = user.hotel.adminId;
+
+    const license = await (prisma as any).license.findUnique({
+      where: { adminId }
+    });
+
+    if (!license) {
+      return {
+        valid: false,
+        message: 'License is not activated. Please contact your administrator.'
+      };
+    }
+
+    const now = new Date();
+    const graceEnd = new Date(license.expiryDate);
+    graceEnd.setDate(graceEnd.getDate() + (license.gracePeriodDays || 7));
+
+    if (now > graceEnd) {
+      return {
+        valid: false,
+        message: 'Your plan has expired. Please contact your administrator to renew.'
+      };
+    }
+
+    return {
+      valid: true,
+      message: 'License active',
+      adminId,
+      licenseKey: license.licenseKey,
+      expiryDate: license.expiryDate,
+      status: license.status
+    };
+  }
 }

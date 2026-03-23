@@ -7,6 +7,7 @@ const router = Router();
 const controller = new LicenseController();
 
 router.post('/activate', authenticate, authorize('admin', 'hotel_manager'), controller.activate.bind(controller));
+router.post('/check-staff', authenticate, controller.checkStaff.bind(controller));
 
 router.use(authenticate, superAdminOnly);
 
