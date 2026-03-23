@@ -5,13 +5,41 @@ export class BillsService {
     async getBillsByHotel(hotelId: string, status?: string) {
         const where: any = { hotelId };
         if (status) where.status = status;
-        return prisma.bill.findMany({
+        const bills = await prisma.bill.findMany({
             where,
             include: {
-                booking: { select: { guestName: true, checkInDate: true, checkOutDate: true } },
+                booking: { 
+                    select: { 
+                        guestName: true, 
+                        checkInDate: true, 
+                        checkOutDate: true,
+                        miscCharges: { select: { amount: true, quantity: true } },
+                        restaurantOrders: { 
+                            where: { status: { not: 'cancelled' } },
+                            select: { totalAmount: true } 
+                        }
+                    } 
+                },
                 invoice: { select: { id: true, invoiceNumber: true, status: true } },
             },
             orderBy: { createdAt: 'desc' },
+        });
+
+        return bills.map((bill: any) => {
+            if (bill.status && bill.status.toLowerCase() !== 'paid' && bill.booking) {
+                const miscTotal = bill.booking.miscCharges?.reduce((sum: number, charge: any) => 
+                    sum + (Number(charge.amount) * Number(charge.quantity)), 0) || 0;
+                    
+                const restTotal = bill.booking.restaurantOrders?.reduce((sum: number, order: any) => 
+                    sum + Number(order.totalAmount), 0) || 0;
+
+                return {
+                    ...bill,
+                    miscCharges: Math.max(Number(bill.miscCharges), miscTotal),
+                    restaurantCharges: Math.max(Number(bill.restaurantCharges), restTotal)
+                };
+            }
+            return bill;
         });
     }
 
@@ -23,13 +51,25 @@ export class BillsService {
                     include: {
                         room: { include: { roomType: true } },
                         miscCharges: true,
-                        restaurantOrders: { include: { orderItems: { include: { menuItem: true } } } },
+                        restaurantOrders: { where: { status: { not: 'cancelled' } }, include: { orderItems: { include: { menuItem: true } } } },
                     },
                 },
                 invoice: true,
             },
         });
         if (!bill) throw new NotFoundError('Bill not found');
+
+        if (bill.status && bill.status.toLowerCase() !== 'paid' && bill.booking) {
+            const miscTotal = (bill.booking as any).miscCharges?.reduce((sum: number, charge: any) => 
+                sum + (Number(charge.amount) * Number(charge.quantity)), 0) || 0;
+                
+            const restTotal = (bill.booking as any).restaurantOrders?.reduce((sum: number, order: any) => 
+                sum + Number(order.totalAmount), 0) || 0;
+
+            bill.miscCharges = Math.max(Number(bill.miscCharges), miscTotal) as any;
+            bill.restaurantCharges = Math.max(Number(bill.restaurantCharges), restTotal) as any;
+        }
+
         return bill;
     }
 
