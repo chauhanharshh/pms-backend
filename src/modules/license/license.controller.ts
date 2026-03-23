@@ -11,7 +11,7 @@ export class LicenseController {
         {
           hotelId: req.body.hotelId,
           adminId: req.body.adminId,
-          planType: (req.body.planType || req.body.plan || 'monthly') as 'monthly' | 'annual',
+          plan: (req.body.planType || req.body.plan || 'monthly') as 'monthly' | 'annual',
           durationMonths: Number(req.body.durationMonths ?? req.body.duration),
           amount: Number(req.body.amount || 0),
           startDate: req.body.startDate,

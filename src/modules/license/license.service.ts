@@ -6,7 +6,7 @@ import { UserRole } from '@prisma/client';
 type CreateLicenseInput = {
   hotelId?: string;
   adminId?: string;
-  planType: 'monthly' | 'annual';
+  plan: 'monthly' | 'annual';
   durationMonths: number;
   amount: number;
   startDate?: string;
@@ -35,7 +35,7 @@ type ActivateLicenseInput = {
   hotelId?: string;
 };
 
-const GRACE_PERIOD_DAYS = 3;
+const GRACE_PERIOD_DAYS = 7;
 const READ_ONLY_PERIOD_DAYS = 15;
 
 const toDateOnly = (date: Date) => new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
@@ -81,71 +81,7 @@ const statusLabel = (status: string) => {
   }
 };
 
-let initialized = false;
-
 export class LicenseService {
-  async ensureTables() {
-    if (initialized) return;
-
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "licenses" (
-        "id" UUID PRIMARY KEY,
-        "adminId" UUID NOT NULL REFERENCES "users"("id") ON DELETE CASCADE,
-        "licenseKey" VARCHAR(64) NOT NULL UNIQUE,
-        "planType" VARCHAR(20) NOT NULL,
-        "durationMonths" INTEGER NOT NULL,
-        "amount" DECIMAL(12,2) NOT NULL DEFAULT 0,
-        "startDate" DATE NOT NULL,
-        "expiryDate" DATE NOT NULL,
-        "status" VARCHAR(20) NOT NULL DEFAULT 'active',
-        "createdBy" UUID NULL,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
-        "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW()
-      );
-    `);
-
-    await prisma.$executeRawUnsafe(`
-      CREATE INDEX IF NOT EXISTS "idx_licenses_admin" ON "licenses"("adminId");
-    `);
-
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "license_devices" (
-        "id" UUID PRIMARY KEY,
-        "licenseId" UUID NOT NULL REFERENCES "licenses"("id") ON DELETE CASCADE,
-        "deviceName" VARCHAR(200) NULL,
-        "os" VARCHAR(100) NULL,
-        "ip" VARCHAR(100) NULL,
-        "version" VARCHAR(100) NULL,
-        "lastActive" TIMESTAMP NOT NULL DEFAULT NOW(),
-        "createdAt" TIMESTAMP NOT NULL DEFAULT NOW()
-      );
-    `);
-
-    await prisma.$executeRawUnsafe(`
-      CREATE UNIQUE INDEX IF NOT EXISTS "idx_license_devices_unique" ON "license_devices"("licenseId", "deviceName", "ip");
-    `);
-
-    await prisma.$executeRawUnsafe(`
-      CREATE TABLE IF NOT EXISTS "license_payments" (
-        "id" UUID PRIMARY KEY,
-        "licenseId" UUID NOT NULL REFERENCES "licenses"("id") ON DELETE CASCADE,
-        "hotelId" UUID NOT NULL REFERENCES "hotels"("id") ON DELETE CASCADE,
-        "amount" DECIMAL(12,2) NOT NULL,
-        "method" VARCHAR(50) NOT NULL,
-        "notes" TEXT NULL,
-        "extendedFrom" DATE NULL,
-        "extendedTo" DATE NULL,
-        "createdAt" TIMESTAMP NOT NULL DEFAULT NOW()
-      );
-    `);
-
-    await prisma.$executeRawUnsafe(`
-      CREATE INDEX IF NOT EXISTS "idx_license_payments_license" ON "license_payments"("licenseId");
-    `);
-
-    initialized = true;
-  }
-
   generateLicenseKey() {
     const alphaNum = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     const part = () => Array.from({ length: 4 }, () => alphaNum[Math.floor(Math.random() * alphaNum.length)]).join('');
@@ -153,8 +89,6 @@ export class LicenseService {
   }
 
   async createLicense(input: CreateLicenseInput, createdBy?: string) {
-    await this.ensureTables();
-
     const resolvedAdminId = input.adminId?.trim() || undefined;
     if (!resolvedAdminId) {
       throw new BadRequestError('adminId is required');
@@ -171,87 +105,98 @@ export class LicenseService {
     let key = this.generateLicenseKey();
     // Retry a few times for unique collision resistance.
     for (let i = 0; i < 5; i += 1) {
-      const existing = await prisma.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "licenses" WHERE "licenseKey" = ${key} LIMIT 1
-      `;
-      if (existing.length === 0) break;
+      const existing = await (prisma as any).license.findUnique({
+        where: { licenseKey: key },
+        select: { id: true }
+      });
+      if (!existing) break;
       key = this.generateLicenseKey();
     }
 
-    const id = randomUUID();
     const computed = computeStatus(expiryDate);
 
-    await prisma.$executeRaw`
-      INSERT INTO "licenses"
-      ("id", "adminId", "licenseKey", "planType", "durationMonths", "amount", "startDate", "expiryDate", "status", "createdBy", "updatedAt")
-      VALUES
-      (${id}::uuid, ${resolvedAdminId}::uuid, ${key}, ${input.planType}, ${Number(input.durationMonths)}, ${Number(input.amount)}, ${startDate}, ${expiryDate}, ${computed.status}, ${createdBy ?? null}::uuid, NOW())
-    `;
-
-    const [created] = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."adminId", u."fullName" AS "adminName", u."username" AS "adminUsername", l."licenseKey", l."planType", l."durationMonths", l."amount",
-             l."startDate", l."expiryDate", l."status", l."createdAt", l."updatedAt"
-      FROM "licenses" l
-      LEFT JOIN "users" u ON u."id" = l."adminId"
-      WHERE l."id" = ${id}::uuid
-      LIMIT 1
-    `;
+    const created = await (prisma as any).license.create({
+      data: {
+        adminId: resolvedAdminId,
+        licenseKey: key,
+        plan: input.plan || 'monthly',
+        amount: Number(input.amount) || 0,
+        startDate,
+        expiryDate,
+        status: computed.status,
+        gracePeriodDays: GRACE_PERIOD_DAYS,
+        maxHotels: 1, // default
+        createdBy: createdBy ?? null,
+      },
+      include: {
+        admin: {
+          select: {
+            fullName: true,
+            username: true,
+          }
+        }
+      }
+    });
 
     return {
       ...created,
+      adminName: created.admin?.fullName,
+      adminUsername: created.admin?.username,
       statusLabel: statusLabel(created.status),
     };
   }
 
   async getAllLicenses() {
-    await this.ensureTables();
+    const licenses = await (prisma as any).license.findMany({
+      include: {
+        admin: {
+          select: {
+            fullName: true,
+            username: true,
+          }
+        },
+        _count: {
+          select: { devices: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
 
-    const rows = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."adminId", u."fullName" AS "adminName", u."username" AS "adminUsername", l."licenseKey", l."planType", l."durationMonths", l."amount",
-             l."startDate", l."expiryDate", l."status", l."createdAt", l."updatedAt",
-             COALESCE(COUNT(d."id"), 0)::int AS "devices"
-      FROM "licenses" l
-      LEFT JOIN "users" u ON u."id" = l."adminId"
-      LEFT JOIN "license_devices" d ON d."licenseId" = l."id"
-      GROUP BY l."id", u."fullName", u."username"
-      ORDER BY l."createdAt" DESC
-    `;
+    const results = [];
+    for (const license of licenses) {
+      const computed = computeStatus(new Date(license.expiryDate));
+      
+      if (license.status !== computed.status) {
+        await (prisma as any).license.update({
+          where: { id: license.id },
+          data: { status: computed.status }
+        });
+        license.status = computed.status;
+      }
 
-    const updates = rows
-      .map((row) => ({ row, computed: computeStatus(new Date(row.expiryDate)) }))
-      .filter(({ row, computed }) => row.status !== computed.status);
-
-    if (updates.length > 0) {
-      await Promise.all(
-        updates.map(({ row, computed }) => prisma.$executeRaw`
-          UPDATE "licenses" SET "status" = ${computed.status}, "updatedAt" = NOW() WHERE "id" = ${row.id}::uuid
-        `),
-      );
+      results.push({
+        ...license,
+        adminName: license.admin?.fullName,
+        adminUsername: license.admin?.username,
+        devices: license._count?.devices || 0,
+        statusLabel: statusLabel(license.status),
+        daysLeft: computed.daysLeft,
+      });
     }
 
-    return rows.map((row) => {
-      const computed = computeStatus(new Date(row.expiryDate));
-      return {
-        ...row,
-        status: computed.status,
-        statusLabel: statusLabel(computed.status),
-        daysLeft: computed.daysLeft,
-      };
-    });
+    return results;
   }
 
   async extendLicense(input: ExtendLicenseInput) {
-    await this.ensureTables();
+    const license = await (prisma as any).license.findUnique({
+      where: { id: input.licenseId }
+    });
+
+    if (!license) throw new NotFoundError('License not found');
 
     if (![1, 3, 6, 12].includes(Number(input.extendMonths))) {
       throw new BadRequestError('extendMonths must be one of 1, 3, 6, 12');
     }
-
-    const [license] = await prisma.$queryRaw<Array<any>>`
-      SELECT * FROM "licenses" WHERE "id" = ${input.licenseId}::uuid LIMIT 1
-    `;
-
-    if (!license) throw new NotFoundError('License not found');
 
     const today = toDateOnly(new Date());
     const currentExpiry = toDateOnly(new Date(license.expiryDate));
@@ -259,88 +204,97 @@ export class LicenseService {
     const newExpiry = addMonths(effectiveStart, Number(input.extendMonths));
     const computed = computeStatus(newExpiry);
 
-    await prisma.$executeRaw`
-      UPDATE "licenses"
-      SET "expiryDate" = ${newExpiry},
-          "status" = ${computed.status},
-          "updatedAt" = NOW()
-      WHERE "id" = ${input.licenseId}::uuid
-    `;
+    const updated = await (prisma as any).license.update({
+      where: { id: input.licenseId },
+      data: {
+        expiryDate: newExpiry,
+        status: computed.status,
+        updatedAt: new Date(),
+      },
+      include: {
+        admin: {
+          select: {
+            fullName: true,
+            username: true,
+          }
+        }
+      }
+    });
 
-    await prisma.$executeRaw`
-      INSERT INTO "license_payments"
-      ("id", "licenseId", "amount", "method", "notes", "extendedFrom", "extendedTo")
-      VALUES
-      (${randomUUID()}::uuid, ${input.licenseId}::uuid, ${Number(input.amount)}, ${input.paymentMethod}, ${input.notes ?? null}, ${currentExpiry}, ${newExpiry})
-    `;
-
-    const [updated] = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."hotelId", h."name" AS "hotelName", l."licenseKey", l."planType", l."durationMonths", l."amount",
-             l."startDate", l."expiryDate", l."status", l."createdAt", l."updatedAt"
-      FROM "licenses" l
-      JOIN "hotels" h ON h."id" = l."hotelId"
-      WHERE l."id" = ${input.licenseId}::uuid
-      LIMIT 1
-    `;
+    await (prisma as any).licensePayment.create({
+      data: {
+        licenseId: input.licenseId,
+        amount: Number(input.amount),
+        method: input.paymentMethod,
+        notes: input.notes ?? null,
+        extendedFrom: currentExpiry,
+        extendedTo: newExpiry,
+      }
+    });
 
     return {
       ...updated,
+      adminName: updated.admin?.fullName,
+      adminUsername: updated.admin?.username,
       statusLabel: statusLabel(updated.status),
     };
   }
 
   async getLicenseDevices(licenseId: string) {
-    await this.ensureTables();
-
-    return prisma.$queryRaw<Array<any>>`
-      SELECT d."id", d."deviceName", d."os", d."ip", d."version", d."lastActive"
-      FROM "license_devices" d
-      WHERE d."licenseId" = ${licenseId}::uuid
-      ORDER BY d."lastActive" DESC
-    `;
+    return (prisma as any).licenseDevice.findMany({
+      where: { licenseId },
+      orderBy: { lastActive: 'desc' }
+    });
   }
 
   async getLicensePayments(licenseId: string) {
-    await this.ensureTables();
-
-    return prisma.$queryRaw<Array<any>>`
-      SELECT p."id", p."amount", p."method", p."notes", p."extendedFrom", p."extendedTo", p."createdAt"
-      FROM "license_payments" p
-      WHERE p."licenseId" = ${licenseId}::uuid
-      ORDER BY p."createdAt" DESC
-    `;
+    return (prisma as any).licensePayment.findMany({
+      where: { licenseId },
+      orderBy: { createdAt: 'desc' }
+    });
   }
 
   async checkLicense(input: CheckLicenseInput) {
-    await this.ensureTables();
-
     if (!input.licenseKey?.trim()) throw new BadRequestError('licenseKey is required');
 
-    const [license] = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."adminId", l."licenseKey", l."planType", l."startDate", l."expiryDate"
-      FROM "licenses" l
-      WHERE l."licenseKey" = ${input.licenseKey.trim()}
-      LIMIT 1
-    `;
+    const license = await (prisma as any).license.findUnique({
+      where: { licenseKey: input.licenseKey.trim() }
+    });
 
     if (!license) {
       return { valid: false, status: 'expired', statusLabel: statusLabel('expired') };
     }
 
     const computed = computeStatus(new Date(license.expiryDate));
-    await prisma.$executeRaw`
-      UPDATE "licenses" SET "status" = ${computed.status}, "updatedAt" = NOW() WHERE "id" = ${license.id}::uuid
-    `;
+    if (license.status !== computed.status) {
+      await (prisma as any).license.update({
+        where: { id: license.id },
+        data: { status: computed.status }
+      });
+    }
 
     if (input.deviceName || input.ip) {
-      await prisma.$executeRaw`
-        INSERT INTO "license_devices"
-        ("id", "licenseId", "deviceName", "os", "ip", "version", "lastActive")
-        VALUES
-        (${randomUUID()}::uuid, ${license.id}::uuid, ${input.deviceName ?? null}, ${input.os ?? null}, ${input.ip ?? null}, ${input.version ?? null}, NOW())
-        ON CONFLICT ("licenseId", "deviceName", "ip")
-        DO UPDATE SET "os" = EXCLUDED."os", "version" = EXCLUDED."version", "lastActive" = NOW()
-      `;
+      await (prisma as any).licenseDevice.upsert({
+        where: {
+          licenseId_deviceName_ip: {
+            licenseId: license.id,
+            deviceName: input.deviceName ?? null,
+            ip: input.ip ?? null,
+          }
+        },
+        create: {
+          licenseId: license.id,
+          deviceName: input.deviceName ?? null,
+          os: input.os ?? null,
+          ip: input.ip ?? null,
+          version: input.version ?? null,
+        },
+        update: {
+          os: input.os ?? null,
+          version: input.version ?? null,
+          lastActive: new Date(),
+        }
+      });
     }
 
     return {
@@ -349,41 +303,37 @@ export class LicenseService {
       statusLabel: statusLabel(computed.status),
       daysLeft: computed.daysLeft,
       adminId: license.adminId,
-      planType: license.planType,
+      plan: license.plan,
       expiryDate: license.expiryDate,
     };
   }
 
   async activateLicense(input: ActivateLicenseInput & { adminId?: string }) {
-    await this.ensureTables();
-
     const key = input.licenseKey?.trim();
     if (!key) throw new BadRequestError('licenseKey is required');
 
-    // Require adminId for all activations
     const adminId = input.adminId || input.userId;
     if (!adminId) throw new BadRequestError('adminId is required');
 
-    const [license] = await prisma.$queryRaw<Array<any>>`
-      SELECT l."id", l."adminId", l."licenseKey", l."status", l."expiryDate"
-      FROM "licenses" l
-      WHERE l."licenseKey" = ${key}
-      LIMIT 1
-    `;
+    const license = await (prisma as any).license.findUnique({
+      where: { licenseKey: key }
+    });
 
     if (!license) {
       throw new BadRequestError('Invalid license key');
     }
 
-    // Check license is assigned to this admin
     if (license.adminId !== adminId) {
       throw new BadRequestError('This license key is not assigned to your account');
     }
 
     const computed = computeStatus(new Date(license.expiryDate));
-    await prisma.$executeRaw`
-      UPDATE "licenses" SET "status" = ${computed.status}, "updatedAt" = NOW() WHERE "id" = ${license.id}::uuid
-    `;
+    if (license.status !== computed.status) {
+      await (prisma as any).license.update({
+        where: { id: license.id },
+        data: { status: computed.status }
+      });
+    }
 
     if (computed.status === 'expired') {
       throw new BadRequestError('License has expired. Please contact support to renew.');
