@@ -5,17 +5,23 @@ export class MiscChargesService {
     async getMiscChargesByHotel(hotelId: string, bookingId?: string) {
         const where: any = { hotelId, isDeleted: false };
         if (bookingId) where.bookingId = bookingId;
-        return prisma.miscCharge.findMany({
+        const charges = await prisma.miscCharge.findMany({
             where,
             include: {
-                booking: { select: { id: true, guestName: true } },
+                booking: { select: { id: true, guestName: true, room: { select: { roomNumber: true } } } },
+                room: { select: { id: true, roomNumber: true } },
             },
             orderBy: { chargeDate: 'desc' },
         });
+        return charges.map(c => ({
+            ...c,
+            guestName: c.booking?.guestName || null,
+            roomNumber: c.room?.roomNumber || c.booking?.room?.roomNumber || null
+        }));
     }
 
     async createMiscCharge(data: any, hotelId: string, userId: string) {
-        return prisma.miscCharge.create({
+        const charge = await prisma.miscCharge.create({
             data: {
                 hotelId,
                 roomId: data.roomId || null,
@@ -28,24 +34,51 @@ export class MiscChargesService {
                 createdBy: userId,
                 updatedBy: userId,
             },
+            include: {
+                booking: { select: { guestName: true, room: { select: { roomNumber: true } } } },
+                room: { select: { roomNumber: true } }
+            }
         });
+        return {
+            ...charge,
+            guestName: charge.booking?.guestName || null,
+            roomNumber: charge.room?.roomNumber || charge.booking?.room?.roomNumber || null
+        };
     }
 
     async updateMiscCharge(chargeId: string, hotelId: string, data: any, userId: string) {
         const charge = await prisma.miscCharge.findFirst({ where: { id: chargeId, hotelId } });
         if (!charge) throw new NotFoundError('Misc charge not found');
-        return prisma.miscCharge.update({
+        const updatedCharge = await prisma.miscCharge.update({
             where: { id: chargeId },
             data: { ...data, updatedBy: userId },
+            include: {
+                booking: { select: { guestName: true, room: { select: { roomNumber: true } } } },
+                room: { select: { roomNumber: true } }
+            }
         });
+        return {
+            ...updatedCharge,
+            guestName: updatedCharge.booking?.guestName || null,
+            roomNumber: updatedCharge.room?.roomNumber || updatedCharge.booking?.room?.roomNumber || null
+        };
     }
 
     async deleteMiscCharge(chargeId: string, hotelId: string, userId: string) {
         const charge = await prisma.miscCharge.findFirst({ where: { id: chargeId, hotelId } });
         if (!charge) throw new NotFoundError('Misc charge not found');
-        return prisma.miscCharge.update({
+        const deletedCharge = await prisma.miscCharge.update({
             where: { id: chargeId },
             data: { isDeleted: true, updatedBy: userId },
+            include: {
+                booking: { select: { guestName: true, room: { select: { roomNumber: true } } } },
+                room: { select: { roomNumber: true } }
+            }
         });
+        return {
+            ...deletedCharge,
+            guestName: deletedCharge.booking?.guestName || null,
+            roomNumber: deletedCharge.room?.roomNumber || deletedCharge.booking?.room?.roomNumber || null
+        };
     }
 }
