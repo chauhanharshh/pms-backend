@@ -14,11 +14,7 @@ export class DayClosingService {
             where: { hotelId, paymentMethod: 'cash', paymentDate: { gte: start, lte: end }, isDeleted: false },
             _sum: { amount: true },
         });
-        const restaurantCash = await prisma.restaurantOrder.aggregate({
-            where: { hotelId, paymentMethod: 'cash', billedAt: { gte: start, lte: end }, isDeleted: false },
-            _sum: { totalAmount: true },
-        });
-        const cashReceived = (advanceCash._sum.amount || new Decimal(0)).add(restaurantCash._sum.totalAmount || new Decimal(0));
+        const cashReceived = (advanceCash._sum.amount || new Decimal(0));
 
         // 2. Bank Received
         const advanceBank = await prisma.advancePayment.aggregate({
@@ -30,38 +26,14 @@ export class DayClosingService {
             },
             _sum: { amount: true },
         });
-        const restaurantBank = await prisma.restaurantOrder.aggregate({
-            where: {
-                hotelId,
-                paymentMethod: { in: ['card', 'upi'] },
-                billedAt: { gte: start, lte: end },
-                isDeleted: false
-            },
-            _sum: { totalAmount: true },
-        });
-        const bankReceived = (advanceBank._sum.amount || new Decimal(0)).add(restaurantBank._sum.totalAmount || new Decimal(0));
+        const bankReceived = (advanceBank._sum.amount || new Decimal(0));
 
-        // 3. Cash Paid
-        const expenseCash = await prisma.expense.aggregate({
-            where: { hotelId, paymentMethod: 'cash', expenseDate: { gte: start, lte: end }, isDeleted: false },
-            _sum: { amount: true },
-        });
         const voucherCash = await prisma.paymentVoucher.aggregate({
             where: { hotelId, paymentMethod: 'cash', voucherDate: { gte: start, lte: end }, isDeleted: false },
             _sum: { amount: true },
         });
-        const cashPaid = (expenseCash._sum.amount || new Decimal(0)).add(voucherCash._sum.amount || new Decimal(0));
+        const cashPaid = (voucherCash._sum.amount || new Decimal(0));
 
-        // 4. Bank Paid
-        const expenseBank = await prisma.expense.aggregate({
-            where: {
-                hotelId,
-                paymentMethod: { in: ['card', 'upi', 'bank'] },
-                expenseDate: { gte: start, lte: end },
-                isDeleted: false
-            },
-            _sum: { amount: true },
-        });
         const voucherBank = await prisma.paymentVoucher.aggregate({
             where: {
                 hotelId,
@@ -71,7 +43,7 @@ export class DayClosingService {
             },
             _sum: { amount: true },
         });
-        const bankPaid = (expenseBank._sum.amount || new Decimal(0)).add(voucherBank._sum.amount || new Decimal(0));
+        const bankPaid = (voucherBank._sum.amount || new Decimal(0));
 
         // 5. Credit Sale (Invoices generated but not fully paid)
         const invoices = await prisma.invoice.findMany({
@@ -187,15 +159,9 @@ export class DayClosingService {
             include: { bill: true }
         });
 
-        // 3. Unsettled Restaurant Bills
-        const pendingOrders = await prisma.restaurantOrder.findMany({
-            where: { hotelId, status: { notIn: ['billed', 'cancelled'] }, isDeleted: false }
-        });
-
         return {
             pendingBills,
-            openInvoices,
-            pendingOrders
+            openInvoices
         };
     }
 
