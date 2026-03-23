@@ -44,6 +44,9 @@ export class InvoicesService {
                                             gstNumber: true,
                                         }
                                     },
+                                    miscCharges: {
+                                        where: { isDeleted: false }
+                                    }
                                 }
                             },
                         },
@@ -74,6 +77,9 @@ export class InvoicesService {
                             include: {
                                 room: { include: { roomType: true } },
                                 company: true,
+                                miscCharges: {
+                                    where: { isDeleted: false }
+                                }
                             },
                         },
                     },
@@ -271,7 +277,10 @@ export class InvoicesService {
                         bill: {
                             include: {
                                 booking: {
-                                    include: { room: { include: { roomType: true } } }
+                                    include: { 
+                                        room: { include: { roomType: true } },
+                                        miscCharges: { where: { isDeleted: false } }
+                                    }
                                 }
                             }
                         }
@@ -291,7 +300,7 @@ export class InvoicesService {
     async payInvoice(invoiceId: string, hotelId: string, userId: string, paymentMode: string) {
         const invoice = await prisma.invoice.findFirst({
             where: { id: invoiceId, hotelId },
-            include: { bill: { include: { booking: true } } }
+            include: { bill: { include: { booking: { include: { miscCharges: { where: { isDeleted: false } } } } } } }
         });
 
         if (!invoice) throw new NotFoundError('Invoice not found');
@@ -345,7 +354,10 @@ export class InvoicesService {
                     bill: {
                         include: {
                             booking: {
-                                include: { room: { include: { roomType: true } } }
+                                include: { 
+                                    room: { include: { roomType: true } },
+                                    miscCharges: { where: { isDeleted: false } }
+                                }
                             }
                         }
                     }
