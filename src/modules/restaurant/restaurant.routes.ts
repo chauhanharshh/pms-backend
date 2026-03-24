@@ -38,7 +38,10 @@ router.patch('/tables/:id', restaurantController.updateTable.bind(restaurantCont
 router.delete('/tables/:id', restaurantController.deleteTable.bind(restaurantController));
 
 
-// Active Rooms
+// All rooms for restaurant (respects POS Boss Mode for cross-hotel access)
+router.get('/rooms', restaurantController.getRoomsForRestaurant.bind(restaurantController));
+
+// Active Rooms (checked-in only)
 router.get('/checked-in-rooms', restaurantController.getCheckedInRooms.bind(restaurantController));
 
 // KOTs (New Section)

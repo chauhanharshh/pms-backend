@@ -244,6 +244,38 @@ export class RestaurantService {
         }));
     }
 
+    async getAllRoomsForHotel(hotelId: string) {
+        const rooms = await prisma.room.findMany({
+            where: { hotelId },
+            include: {
+                bookings: {
+                    where: { status: { in: ['confirmed', 'checked_in'] } },
+                    select: {
+                        id: true,
+                        guestName: true,
+                        status: true,
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                },
+            },
+            orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
+        });
+
+        return rooms.map(r => ({
+            id: r.id,
+            roomNumber: r.roomNumber,
+            status: r.status,
+            hotelId: r.hotelId,
+            bookings: r.bookings.map((b: any) => ({
+                id: b.id,
+                status: b.status,
+                guestName: b.guestName,
+                guest: { name: b.guestName },
+            })),
+        }));
+    }
+
     async createOrder(data: any, hotelId: string, userId: string) {
         return prisma.$transaction(async (tx) => {
             // Auto-generate order number

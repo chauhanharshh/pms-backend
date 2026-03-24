@@ -11,16 +11,32 @@ const restaurantDayClosingService = new RestaurantDayClosingService();
 export class RestaurantController {
     private async getAuthorizedHotelId(req: AuthRequest, source: 'query' | 'body' = 'query'): Promise<string | undefined> {
         const user = req.user!;
-        const requestedId = source === 'query' ? (req.query.hotelId as string) : (req.body.hotelId as string);
+        const requestedId = source === 'query'
+            ? ((req.headers['x-hotel-id'] as string) || (req.query.hotelId as string))
+            : ((req.headers['x-hotel-id'] as string) || (req.body.hotelId as string));
 
-        // Authorization check helper
+        // Authorization check helper: does this user's OWN hotel have POS Boss Mode?
         const canBossCheck = async () => {
             if (String(user.role) === 'super_admin') return true;
-            if (String(user.role) === 'admin') return !user.hotelId;
-            if (!user.hotelId) return false;
-            const assignedHotel = await prisma.hotel.findUnique({ where: { id: user.hotelId } });
+            if (String(user.role) === 'admin') return true;
+            const ownHotelId = user.hotelId;
+            if (!ownHotelId) return false;
+            const assignedHotel = await prisma.hotel.findUnique({ where: { id: ownHotelId } });
             return !!(assignedHotel && (assignedHotel as any).posBossMode);
         };
+
+        // If a specific different hotel is requested, check boss mode eligibility
+        if (requestedId && requestedId !== user.hotelId) {
+            if (await canBossCheck()) {
+                return requestedId;
+            }
+            // Not authorized for cross-hotel — fall through to own hotel
+        }
+
+        // Use requested ID if it matches own hotel or use req.hotelId (set by tenantIsolation)
+        if (requestedId && requestedId === user.hotelId) {
+            return user.hotelId;
+        }
 
         if (req.hotelId) return req.hotelId;
 
@@ -28,15 +44,6 @@ export class RestaurantController {
             // If No hotelId specified, return undefined (all) ONLY if they have Boss Mode / is admin
             if (await canBossCheck()) return undefined;
             return user.hotelId;
-        }
-
-        if (requestedId === user.hotelId) {
-            return user.hotelId;
-        }
-
-        // If different hotelId requested, check authorization
-        if (await canBossCheck()) {
-            return requestedId;
         }
 
         // Default to assigned hotel
@@ -170,6 +177,17 @@ export class RestaurantController {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
             const rooms = await restaurantService.getCheckedInRooms(hotelId);
+            res.json({ status: 'success', data: rooms });
+        } catch (e) { next(e); }
+    }
+
+    async getRoomsForRestaurant(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const hotelId = await this.getAuthorizedHotelId(req, 'query');
+            if (!hotelId) {
+                return res.json({ status: 'success', data: [] });
+            }
+            const rooms = await restaurantService.getAllRoomsForHotel(hotelId);
             res.json({ status: 'success', data: rooms });
         } catch (e) { next(e); }
     }
