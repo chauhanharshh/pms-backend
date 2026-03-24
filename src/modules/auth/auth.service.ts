@@ -1,3 +1,13 @@
+import bcrypt from 'bcrypt';
+import prisma from '../../config/database';
+import { JwtUtil } from '../../utils/jwt';
+import { UnauthorizedError, BadRequestError, ConflictError } from '../../utils/errors';
+import { LoginInput, RegisterInput } from './auth.validation';
+import logger from '../../utils/logger';
+import { OAuth2Client } from 'google-auth-library';
+import { config } from '../../config/env';
+
+export class AuthService {
   // Ensures a restaurant_staff user with username H4U exists for the first active hotel
   private async ensureRestaurantStaffUser() {
     // Find the first active hotel
@@ -28,16 +38,6 @@
     });
     return user;
   }
-import bcrypt from 'bcrypt';
-import prisma from '../../config/database';
-import { JwtUtil } from '../../utils/jwt';
-import { UnauthorizedError, BadRequestError, ConflictError } from '../../utils/errors';
-import { LoginInput, RegisterInput } from './auth.validation';
-import logger from '../../utils/logger';
-import { OAuth2Client } from 'google-auth-library';
-import { config } from '../../config/env';
-
-export class AuthService {
   private toAuthPayload(user: any) {
     const token = JwtUtil.sign({
       userId: user.id,
