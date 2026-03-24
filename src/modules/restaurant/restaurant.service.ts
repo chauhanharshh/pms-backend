@@ -2,6 +2,7 @@ import prisma from '../../config/database';
 import { NotFoundError, BadRequestError } from '../../utils/errors';
 import { Decimal } from '@prisma/client/runtime/library';
 import { calculateRoomTax } from '../../utils/tax';
+import { calculateRoomDays } from '../../utils/duration';
 
 export class RestaurantService {
     async getServiceChargeReport(filters: {
@@ -475,9 +476,15 @@ export class RestaurantService {
                     // Recalculate Tax (Room Rent based)
                     const booking = await tx.booking.findUnique({ where: { id: order.bookingId } });
                     if (booking) {
-                        const nights = Math.max(1, Math.ceil(
-                            (new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / 86400000
-                        ));
+                        const checkInDateTime = new Date(booking.checkInDate);
+                        const [ciH, ciM] = (booking.checkInTime || "14:00").split(':').map(Number);
+                        checkInDateTime.setHours(ciH, ciM || 0, 0, 0);
+
+                        const checkOutDateTime = new Date(booking.checkOutDate);
+                        const [coH, coM] = (booking.checkOutTime || "12:00").split(':').map(Number);
+                        checkOutDateTime.setHours(coH, coM || 0, 0, 0);
+
+                        const nights = calculateRoomDays(checkInDateTime, checkOutDateTime);
                         const dailyRent = roomCharges.div(nights);
                         const taxInfo = calculateRoomTax(dailyRent, nights);
                         const taxAmount = taxInfo.amount;

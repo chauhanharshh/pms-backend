@@ -5,6 +5,7 @@ import logger from '../../utils/logger';
 import { Decimal } from '@prisma/client/runtime/library';
 import { InvoiceStatus } from '@prisma/client';
 import { calculateRoomTax } from '../../utils/tax';
+import { calculateRoomDays } from '../../utils/duration';
 
 const roomsService = new RoomsService();
 
@@ -189,13 +190,22 @@ export class BookingsService {
     remarks?: string;
   }, hotelId: string, userId: string) {
     console.log("walkInCheckIn payload received:", data);
-    const room = await prisma.room.findFirst({ where: { id: data.roomId, hotelId } });
+    const room = await prisma.room.findFirst({ 
+      where: { id: data.roomId, hotelId },
+      include: { hotel: true }
+    });
     if (!room) throw new NotFoundError('Room not found');
     if (room.status !== 'vacant') throw new BadRequestError('Room is not vacant');
 
-    const nights = Math.max(1, Math.ceil(
-      (new Date(data.checkOutDate).getTime() - new Date(data.checkInDate).getTime()) / 86400000
-    ));
+    const checkInDateObj = new Date(data.checkInDate);
+    const [ciH, ciM] = (data.checkInTime || "14:00").split(':').map(Number);
+    checkInDateObj.setHours(ciH, ciM || 0, 0, 0);
+
+    const checkOutDateObj = new Date(data.checkOutDate);
+    const [coH, coM] = (data.checkOutTime || "12:00").split(':').map(Number);
+    checkOutDateObj.setHours(coH, coM || 0, 0, 0);
+
+    const nights = calculateRoomDays(checkInDateObj, checkOutDateObj, room.hotel?.checkOutTime);
     const roomRate = new Decimal(data.roomRate.toString());
     const roomCharges = roomRate.mul(nights);
     // Recalculate tax on backend for consistency
@@ -242,7 +252,7 @@ export class BookingsService {
           vehicleDetails: data.vehicleDetails,
           remarks: data.remarks,
           roomPrice: roomRate,
-        },
+        } as any,
         include: { room: { include: { roomType: true } } },
       });
 
@@ -306,7 +316,7 @@ export class BookingsService {
   ) {
     const booking = await prisma.booking.findFirst({
       where: { id: bookingId, hotelId },
-      include: { room: true },
+      include: { room: true, hotel: true },
     });
 
     if (!booking) throw new NotFoundError('Booking not found');
@@ -332,10 +342,10 @@ export class BookingsService {
           checkInTime: data?.checkInTime ?? booking.checkInTime,
           checkOutTime: data?.checkOutTime ?? booking.checkOutTime,
           plan: data?.plan ?? booking.plan,
-          roomPrice: data?.roomPrice ? new Decimal(data.roomPrice.toString()) : booking.roomPrice,
+          roomPrice: data?.roomPrice ? new Decimal(data.roomPrice.toString()) : (booking as any).roomPrice,
           updatedBy: userId,
-        },
-        include: { room: true, advancePayments: true },
+        } as any,
+        include: { room: true, advancePayments: true, hotel: true },
       });
 
       await tx.room.update({
@@ -343,10 +353,16 @@ export class BookingsService {
         data: { status: 'occupied', updatedBy: userId },
       });
 
-      const checkIn = new Date(resolvedCheckInDate);
-      const checkOut = new Date(resolvedCheckOutDate);
-      const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
-      const basePrice = booking.roomPrice ? new Decimal(booking.roomPrice.toString()) : booking.room.basePrice;
+      const checkInDateTime = new Date(resolvedCheckInDate);
+      const [ciH, ciM] = (data?.checkInTime ?? (booking.checkInTime || "14:00")).split(':').map(Number);
+      checkInDateTime.setHours(ciH, ciM || 0, 0, 0);
+
+      const checkOutDateTime = new Date(resolvedCheckOutDate);
+      const [coH, coM] = (data?.checkOutTime ?? (booking.checkOutTime || "12:00")).split(':').map(Number);
+      checkOutDateTime.setHours(coH, coM || 0, 0, 0);
+
+      const nights = calculateRoomDays(checkInDateTime, checkOutDateTime, (booking as any).hotel?.checkOutTime);
+      const basePrice = (booking as any).roomPrice ? new Decimal((booking as any).roomPrice.toString()) : booking.room.basePrice;
       const roomCharges = basePrice.mul(nights);
       
       // Calculate taxes based on 5%/18% rule
@@ -427,9 +443,15 @@ export class BookingsService {
     const subtotal = roomCharges.add(miscTotal).add(restaurantTotal);
 
     // Tax Recalculation logic: GST ONLY ON ROOM RENT using new rules
-    const nights = Math.max(1, Math.ceil(
-      (new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / 86400000
-    ));
+    const checkInDateTime = new Date(booking.checkInDate);
+    const [ciH, ciM] = (booking.checkInTime || "14:00").split(':').map(Number);
+    checkInDateTime.setHours(ciH, ciM || 0, 0, 0);
+
+    const checkOutDateTime = new Date(booking.checkOutDate);
+    const [coH, coM] = (booking.checkOutTime || "12:00").split(':').map(Number);
+    checkOutDateTime.setHours(coH, coM || 0, 0, 0);
+
+    const nights = calculateRoomDays(checkInDateTime, checkOutDateTime, (booking as any).hotel?.checkOutTime);
     const dailyRent = roomCharges.div(nights);
     const taxInfo = calculateRoomTax(dailyRent, nights);
     const taxAmount = taxInfo.amount;
@@ -486,9 +508,15 @@ export class BookingsService {
       const subtotal = roomCharges.add(miscTotal).add(restaurantTotal);
 
       // GST ONLY ON ROOM RENT using new rules
-      const nights = Math.max(1, Math.ceil(
-        (new Date(booking.checkOutDate).getTime() - new Date(booking.checkInDate).getTime()) / 86400000
-      ));
+      const checkInDateTime = new Date(booking.checkInDate);
+      const [ciH, ciM] = (booking.checkInTime || "14:00").split(':').map(Number);
+      checkInDateTime.setHours(ciH, ciM || 0, 0, 0);
+
+      const checkOutDateTime = new Date(booking.checkOutDate);
+      const [coH, coM] = (booking.checkOutTime || "12:00").split(':').map(Number);
+      checkOutDateTime.setHours(coH, coM || 0, 0, 0);
+
+      const nights = calculateRoomDays(checkInDateTime, checkOutDateTime, (booking as any).hotel?.checkOutTime);
       const dailyRent = roomCharges.div(nights);
       const taxInfo = calculateRoomTax(dailyRent, nights);
       const taxAmount = taxInfo.amount;
