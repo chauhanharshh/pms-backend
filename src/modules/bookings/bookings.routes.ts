@@ -16,5 +16,6 @@ router.post('/walk-in', bookingsController.walkIn.bind(bookingsController));
 router.put('/:id/check-in', bookingsController.checkIn.bind(bookingsController));
 router.get('/:id/checkout-preview', bookingsController.getCheckoutPreview.bind(bookingsController));
 router.put('/:id/check-out', bookingsController.checkOut.bind(bookingsController));
+router.patch('/:id/cancel', bookingsController.cancelBooking.bind(bookingsController));
 
 export default router;

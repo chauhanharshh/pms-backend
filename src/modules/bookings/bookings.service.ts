@@ -301,6 +301,40 @@ export class BookingsService {
     });
   }
 
+  async cancelBooking(bookingId: string, userId: string) {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { room: true },
+    });
+
+    if (!booking) throw new NotFoundError('Booking not found');
+    if (booking.status !== 'pending' && booking.status !== 'confirmed') {
+      throw new BadRequestError('Only pending or confirmed bookings can be cancelled');
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const updatedBooking = await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: 'cancelled',
+          updatedBy: userId,
+        },
+      });
+
+      // Free up the room
+      await tx.room.update({
+        where: { id: booking.roomId },
+        data: {
+          status: 'vacant',
+          updatedBy: userId,
+        },
+      });
+
+      logger.info(`Booking ${bookingId} cancelled by user ${userId}`);
+      return updatedBooking;
+    });
+  }
+
   async checkIn(
     bookingId: string,
     hotelId: string,

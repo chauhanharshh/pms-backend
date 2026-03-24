@@ -25,6 +25,11 @@ export const createHotelSchema = z.object({
   isCustomTheme: z.boolean().optional(),
   posBossMode: z.boolean().optional(),
   showAllRooms: z.boolean().optional(),
+  invoiceShowCustomLines: z.boolean().optional(),
+  invoiceLine1: z.string().optional().nullable(),
+  invoiceLine2: z.string().optional().nullable(),
+  invoiceHotelNameColor: z.string().optional().nullable(),
+  invoiceHeaderColor: z.string().optional().nullable(),
 });
 
 export const updateHotelSchema = createHotelSchema.partial();

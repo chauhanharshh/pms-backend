@@ -115,4 +115,14 @@ export class BookingsController {
       next(error);
     }
   }
+
+  async cancelBooking(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const result = await bookingsService.cancelBooking(id, req.user!.userId);
+      return ResponseHandler.success(res, result, 'Booking cancelled successfully');
+    } catch (error) {
+      next(error);
+    }
+  }
 }
