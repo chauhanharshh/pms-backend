@@ -732,6 +732,7 @@ enum UserRole {
   hotel_manager
   hotel_user
   restaurant_staff
+  restaurant_admin
 }
 
 enum RoomStatus {

@@ -4,7 +4,7 @@ import { NotFoundError, BadRequestError, ForbiddenError } from '../../utils/erro
 
 export class UsersService {
   private isAdminLikeRole(role?: string) {
-    return role === 'admin' || role === 'super_admin';
+    return role === 'admin' || role === 'super_admin' || role === 'restaurant_admin';
   }
 
   private resolveMaxHotels(value: unknown, fallback = 1) {
@@ -144,7 +144,7 @@ export class UsersService {
 
   async getAdminAccounts() {
     const admins = await prisma.user.findMany({
-      where: { role: 'admin' },
+      where: { role: { in: ['admin', 'restaurant_admin'] } },
       select: {
         id: true,
         username: true,
@@ -179,7 +179,7 @@ export class UsersService {
         email: data.email,
         phone: data.phone,
         maxHotels,
-        role: 'admin',
+        role: data.role || 'admin',
         isActive: data.isActive ?? true,
         createdBy: requestingUserId,
         updatedBy: requestingUserId,
@@ -203,8 +203,8 @@ export class UsersService {
 
   async updateAdminAccount(userId: string, data: any, requestingUserId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundError('User not found');
-    if (user.role !== 'admin') throw new BadRequestError('Only admin accounts can be edited from this panel');
+    if (!user) throw new NotFoundError('User find failed');
+    if (user.role !== 'admin' && user.role !== 'restaurant_admin') throw new BadRequestError('Only admin accounts can be edited from this panel');
 
     const updateData: any = {
       fullName: data.fullName,
@@ -246,8 +246,8 @@ export class UsersService {
 
   async deleteAdminAccount(userId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundError('User not found');
-    if (user.role !== 'admin') throw new BadRequestError('Only admin accounts can be deleted from this panel');
+    if (!user) throw new NotFoundError('User delete failed');
+    if (user.role !== 'admin' && user.role !== 'restaurant_admin') throw new BadRequestError('Only admin accounts can be deleted from this panel');
 
     return prisma.user.delete({
       where: { id: userId },
@@ -258,8 +258,8 @@ export class UsersService {
     if (!password) throw new BadRequestError('Password is required');
 
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundError('User not found');
-    if (user.role !== 'admin') throw new BadRequestError('Password reset is only supported for admin accounts');
+    if (!user) throw new NotFoundError('User reset failed');
+    if (user.role !== 'admin' && user.role !== 'restaurant_admin') throw new BadRequestError('Password reset is only supported for admin accounts');
 
     const passwordHash = await bcrypt.hash(password, 10);
 
@@ -288,7 +288,7 @@ export class UsersService {
   async setAdminStatus(userId: string, isActive: boolean, requestingUserId: string) {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundError('User not found');
-    if (user.role !== 'admin') throw new BadRequestError('Status update is only supported for admin accounts');
+    if (user.role !== 'admin' && user.role !== 'restaurant_admin') throw new BadRequestError('Status update is only supported for admin accounts');
 
     const updated = await prisma.user.update({
       where: { id: userId },
