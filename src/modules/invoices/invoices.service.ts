@@ -238,6 +238,7 @@ export class InvoicesService {
                     taxAmount: totalTax,
                     totalAmount,
                     balanceDue: totalAmount.sub(bill.paidAmount),
+                    status: totalAmount.sub(bill.paidAmount).lte(0) ? 'paid' : (bill.paidAmount.gt(0) ? 'partial' : 'pending'),
                     updatedBy: userId
                 }
             });

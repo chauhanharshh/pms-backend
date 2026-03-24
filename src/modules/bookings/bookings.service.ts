@@ -347,15 +347,21 @@ export class BookingsService {
       const nights = Math.max(1, Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)));
       const basePrice = booking.roomPrice ? new Decimal(booking.roomPrice.toString()) : booking.room.basePrice;
       const roomCharges = basePrice.mul(nights);
+      
+      // Calculate taxes based on 5%/18% rule
+      const taxInfo = calculateRoomTax(basePrice, nights);
+      const taxAmount = taxInfo.amount;
+      const totalAmount = roomCharges.add(taxAmount);
 
       const bill = await tx.bill.create({
         data: {
           hotelId,
           bookingId: booking.id,
           roomCharges,
+          taxAmount,
           subtotal: roomCharges,
-          totalAmount: roomCharges,
-          balanceDue: roomCharges,
+          totalAmount: totalAmount,
+          balanceDue: totalAmount,
           createdBy: userId,
           updatedBy: userId,
         },
@@ -380,7 +386,8 @@ export class BookingsService {
             where: { id: bill.id },
             data: {
               paidAmount: usedAmount,
-              balanceDue: bill.totalAmount.sub(usedAmount),
+              balanceDue: totalAmount.sub(usedAmount),
+              status: totalAmount.sub(usedAmount).lte(0) ? 'paid' : 'partial',
             },
           });
         }
