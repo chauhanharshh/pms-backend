@@ -241,6 +241,7 @@ export class BookingsService {
           businessSource: data.businessSource,
           vehicleDetails: data.vehicleDetails,
           remarks: data.remarks,
+          roomPrice: roomRate,
         },
         include: { room: { include: { roomType: true } } },
       });
