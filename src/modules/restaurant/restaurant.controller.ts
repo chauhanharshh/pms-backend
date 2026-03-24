@@ -12,8 +12,8 @@ export class RestaurantController {
     private async getAuthorizedHotelId(req: AuthRequest, source: 'query' | 'body' = 'query'): Promise<string | undefined> {
         const user = req.user!;
         const requestedId = source === 'query'
-            ? ((req.headers['x-hotel-id'] as string) || (req.query.hotelId as string))
-            : ((req.headers['x-hotel-id'] as string) || (req.body.hotelId as string));
+            ? ((req.query.hotelId as string) || (req.headers['x-hotel-id'] as string))
+            : ((req.body.hotelId as string) || (req.headers['x-hotel-id'] as string));
 
         // Authorization check helper: does this user's OWN hotel have POS Boss Mode?
         const canBossCheck = async () => {
