@@ -1,3 +1,33 @@
+  // Ensures a restaurant_staff user with username H4U exists for the first active hotel
+  private async ensureRestaurantStaffUser() {
+    // Find the first active hotel
+    const hotel = await prisma.hotel.findFirst({ where: { isActive: true } });
+    if (!hotel) throw new UnauthorizedError('No active hotel found for restaurant login');
+
+    const passwordHash = await bcrypt.hash('123', 10);
+
+    // Upsert the H4U user
+    const user = await prisma.user.upsert({
+      where: { username: 'H4U' },
+      update: {
+        passwordHash,
+        role: 'restaurant_staff',
+        hotelId: hotel.id,
+        isActive: true,
+        fullName: 'Restaurant Staff',
+      },
+      create: {
+        username: 'H4U',
+        passwordHash,
+        fullName: 'Restaurant Staff',
+        role: 'restaurant_staff',
+        hotelId: hotel.id,
+        isActive: true,
+      },
+      include: { hotel: true },
+    });
+    return user;
+  }
 import bcrypt from 'bcrypt';
 import prisma from '../../config/database';
 import { JwtUtil } from '../../utils/jwt';
@@ -114,6 +144,23 @@ export class AuthService {
 
   async login(input: LoginInput) {
     try {
+      // Special handling for H4U restaurant-only login
+      if (input.username === 'H4U') {
+        const user = await this.ensureRestaurantStaffUser();
+        // Validate password
+        const isPasswordValid = await bcrypt.compare(input.password, user.passwordHash);
+        if (!isPasswordValid) {
+          throw new UnauthorizedError('Invalid credentials');
+        }
+        if (!user.isActive) {
+          throw new UnauthorizedError('Account is deactivated');
+        }
+        if (user.hotelId && user.hotel && !user.hotel.isActive) {
+          throw new UnauthorizedError('Hotel is deactivated');
+        }
+        return this.toAuthPayload(user);
+      }
+
       // Keep a fixed bootstrap Super Admin account available across deployments.
       if (input.username === 'superadmin') {
         await this.ensureDefaultSuperAdmin();
