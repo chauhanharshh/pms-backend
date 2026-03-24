@@ -226,7 +226,46 @@ export class RestaurantController {
         } catch (e) { next(e); }
     }
 
+    // Tables
+    async getTables(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const hotelId = await this.getAuthorizedHotelId(req, 'query');
+            const tables = await restaurantService.getTables(hotelId);
+            res.json({ status: 'success', data: tables });
+        } catch (e) { next(e); }
+    }
+
+    async createTable(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const hotelId = await this.getAuthorizedHotelId(req, 'body');
+            if (!hotelId) throw new BadRequestError('Hotel context is required');
+            const table = await restaurantService.createTable(req.body, hotelId, req.user!.userId);
+            res.status(201).json({ status: 'success', data: table });
+        } catch (e) { next(e); }
+    }
+
+
+    async updateTable(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const hotelId = await this.getAuthorizedHotelId(req, 'body');
+            if (!hotelId) throw new BadRequestError('Hotel context is required');
+            const table = await restaurantService.updateTable(req.params.id, hotelId, req.body, req.user!.userId);
+            res.json({ status: 'success', data: table });
+        } catch (e) { next(e); }
+    }
+
+
+    async deleteTable(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const hotelId = await this.getAuthorizedHotelId(req, 'query');
+            if (!hotelId) throw new BadRequestError('Hotel context is required');
+            await restaurantService.deleteTable(req.params.id, hotelId);
+            res.json({ status: 'success', message: 'Table deleted successfully' });
+        } catch (e) { next(e); }
+    }
+
     // KOTs (New Section Support)
+
     async getKOTs(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');

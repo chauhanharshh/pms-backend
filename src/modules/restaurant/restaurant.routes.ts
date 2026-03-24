@@ -31,6 +31,13 @@ router.post('/orders/:id/invoice', restaurantController.generateInvoice.bind(res
 router.post('/orders/:id/kot', restaurantController.generateKOTAndInvoice.bind(restaurantController));
 router.get('/orders/:id/kots', restaurantController.getKOTHistory.bind(restaurantController));
 
+// Tables
+router.get('/tables', restaurantController.getTables.bind(restaurantController));
+router.post('/tables', restaurantController.createTable.bind(restaurantController));
+router.patch('/tables/:id', restaurantController.updateTable.bind(restaurantController));
+router.delete('/tables/:id', restaurantController.deleteTable.bind(restaurantController));
+
+
 // Active Rooms
 router.get('/checked-in-rooms', restaurantController.getCheckedInRooms.bind(restaurantController));
 

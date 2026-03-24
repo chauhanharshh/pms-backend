@@ -55,6 +55,7 @@ model Hotel {
   restaurantKots       RestaurantKOT[]
   restaurantMenu       RestaurantMenu[]
   restaurantOrders     RestaurantOrder[]
+  restaurantTables     RestaurantTable[]
   roomBlocks           RoomBlock[]
   roomTypes            RoomType[]
   rooms                Room[]
@@ -598,6 +599,23 @@ model RestaurantKOT {
   @@index([orderId])
   @@map("restaurant_kots")
 }
+
+model RestaurantTable {
+  id          String   @id @default(uuid()) @db.Uuid
+  hotelId     String   @db.Uuid
+  name        String   @db.VarChar(50)
+  capacity    Int?     @default(2)
+  isActive    Boolean  @default(true)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+
+  @@unique([hotelId, name])
+  @@index([hotelId])
+  @@map("restaurant_tables")
+}
+
 
 model DayClosing {
   id           String   @id @default(uuid()) @db.Uuid

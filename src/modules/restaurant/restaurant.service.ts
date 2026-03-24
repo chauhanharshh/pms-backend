@@ -878,6 +878,65 @@ export class RestaurantService {
         });
     }
 
+    // ── TABLES ──
+    async getTables(hotelId?: string) {
+        const where: any = { isDeleted: false };
+        if (hotelId) where.hotelId = hotelId;
+        return (prisma.restaurantTable as any).findMany({
+            where,
+            orderBy: { name: 'asc' },
+        });
+    }
+
+    async createTable(data: any, hotelId: string, userId: string) {
+        // Check for duplicate name
+        const existing = await (prisma.restaurantTable as any).findFirst({
+            where: { hotelId, name: data.name, isDeleted: false }
+        });
+        if (existing) throw new BadRequestError(`Table with name "${data.name}" already exists`);
+
+        return (prisma.restaurantTable as any).create({
+            data: {
+                hotelId,
+                name: data.name,
+                capacity: data.capacity ? parseInt(data.capacity) : 2,
+                isActive: data.isActive ?? true,
+            },
+        });
+    }
+
+    async updateTable(tableId: string, hotelId: string, data: any, userId: string) {
+        const table = await (prisma.restaurantTable as any).findFirst({ where: { id: tableId, hotelId } });
+        if (!table) throw new NotFoundError('Table not found');
+
+        if (data.name && data.name !== table.name) {
+            const existing = await (prisma.restaurantTable as any).findFirst({
+                where: { hotelId, name: data.name, isDeleted: false, NOT: { id: tableId } }
+            });
+            if (existing) throw new BadRequestError(`Table with name "${data.name}" already exists`);
+        }
+
+        return (prisma.restaurantTable as any).update({
+            where: { id: tableId },
+            data: {
+                ...data,
+                capacity: data.capacity ? parseInt(data.capacity) : table.capacity,
+            },
+        });
+    }
+
+    async deleteTable(tableId: string, hotelId: string) {
+        const table = await (prisma.restaurantTable as any).findFirst({ where: { id: tableId, hotelId } });
+        if (!table) throw new NotFoundError('Table not found');
+
+        // Soft delete
+        return (prisma.restaurantTable as any).update({
+            where: { id: tableId },
+            data: { isDeleted: true },
+        });
+    }
+
+
     async updateKOT(kotId: string, hotelId: string, data: any, userId: string) {
         const kot = await (prisma.restaurantKOT as any).findFirst({
             where: { id: kotId, hotelId, isDeleted: false } as any,
