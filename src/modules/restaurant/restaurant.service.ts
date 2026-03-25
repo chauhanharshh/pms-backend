@@ -18,7 +18,7 @@ export class RestaurantService {
         };
 
         if (filters.hotelId) {
-            where.hotelId = filters.hotelId;
+            where.hotelId = Array.isArray(filters.hotelId) ? { in: filters.hotelId } : filters.hotelId;
         }
 
         if (filters.startDate || filters.endDate) {
@@ -106,9 +106,13 @@ export class RestaurantService {
     }
 
     // ── CATEGORIES ──
-    async getCategories(hotelId?: string) {
+    async getCategories(hotelId?: string | string[]) {
+        const where: any = {};
+        if (hotelId) {
+            where.hotelId = Array.isArray(hotelId) ? { in: hotelId } : hotelId;
+        }
         return prisma.restaurantCategory.findMany({
-            where: hotelId ? { hotelId } : {},
+            where,
             include: { menuItems: { where: { isAvailable: true } } },
             orderBy: { sortOrder: 'asc' },
         });
@@ -140,9 +144,11 @@ export class RestaurantService {
     }
 
     // ── MENU ITEMS ──
-    async getMenuItems(hotelId?: string, categoryId?: string) {
+    async getMenuItems(hotelId?: string | string[], categoryId?: string) {
         const where: any = {};
-        if (hotelId) where.hotelId = hotelId;
+        if (hotelId) {
+            where.hotelId = Array.isArray(hotelId) ? { in: hotelId } : hotelId;
+        }
         if (categoryId) where.categoryId = categoryId;
         return prisma.restaurantMenu.findMany({
             where,
@@ -183,10 +189,12 @@ export class RestaurantService {
     }
 
     // ── ORDERS ──
-    async getOrders(hotelId?: string, status?: string, bookingId?: string) {
+    async getOrders(hotelId?: string | string[], status?: string, bookingId?: string) {
         try {
             const where: any = { isDeleted: false };
-            if (hotelId && hotelId !== 'all') where.hotelId = hotelId;
+            if (hotelId && hotelId !== 'all') {
+                where.hotelId = Array.isArray(hotelId) ? { in: hotelId } : hotelId;
+            }
             if (status && status !== 'all') where.status = status;
             if (bookingId) where.bookingId = bookingId;
 
@@ -206,9 +214,15 @@ export class RestaurantService {
         }
     }
 
-    async getCheckedInRooms(hotelId?: string) {
+    async getCheckedInRooms(hotelId?: string | string[]) {
         const where: any = { status: 'checked_in' };
-        if (hotelId) where.hotelId = hotelId;
+        if (hotelId) {
+            if (Array.isArray(hotelId)) {
+                where.hotelId = { in: hotelId };
+            } else {
+                where.hotelId = hotelId;
+            }
+        }
         const bookings = await prisma.booking.findMany({
             where,
             select: {
@@ -244,9 +258,15 @@ export class RestaurantService {
         }));
     }
 
-    async getAllRoomsForHotel(hotelId?: string) {
+    async getAllRoomsForHotel(hotelId?: string | string[]) {
         const where: any = {};
-        if (hotelId) where.hotelId = hotelId;
+        if (hotelId) {
+            if (Array.isArray(hotelId)) {
+                where.hotelId = { in: hotelId };
+            } else {
+                where.hotelId = hotelId;
+            }
+        }
 
         const rooms = await prisma.room.findMany({
             where,
@@ -895,14 +915,21 @@ export class RestaurantService {
         });
     }
 
-    async getKOTs(hotelId?: string, status?: string) {
+    async getKOTs(hotelId?: string | string[], status?: string) {
         const where: any = { isDeleted: false };
-        if (hotelId) where.hotelId = hotelId;
+        if (hotelId) {
+            if (Array.isArray(hotelId)) {
+                where.hotelId = { in: hotelId };
+            } else {
+                where.hotelId = hotelId;
+            }
+        }
         if (status) where.status = status;
 
         return (prisma.restaurantKOT as any).findMany({
             where,
             include: {
+                hotel: { select: { id: true, name: true } },
                 order: {
                     include: {
                         room: true,
@@ -915,9 +942,15 @@ export class RestaurantService {
     }
 
     // ── TABLES ──
-    async getTables(hotelId?: string) {
+    async getTables(hotelId?: string | string[]) {
         const where: any = { isDeleted: false };
-        if (hotelId) where.hotelId = hotelId;
+        if (hotelId) {
+            if (Array.isArray(hotelId)) {
+                where.hotelId = { in: hotelId };
+            } else {
+                where.hotelId = hotelId;
+            }
+        }
         return (prisma.restaurantTable as any).findMany({
             where,
             orderBy: { name: 'asc' },
@@ -1103,14 +1136,21 @@ export class RestaurantService {
         });
     }
 
-    async getInvoices(hotelId?: string, status?: string) {
+    async getInvoices(hotelId?: string | string[], status?: string) {
         const where: any = { type: 'RESTAURANT', isDeleted: false };
-        if (hotelId) where.hotelId = hotelId;
+        if (hotelId) {
+            if (Array.isArray(hotelId)) {
+                where.hotelId = { in: hotelId };
+            } else {
+                where.hotelId = hotelId;
+            }
+        }
         if (status) where.status = status;
 
         return (prisma.invoice as any).findMany({
             where,
             include: {
+                hotel: { select: { id: true, name: true } },
                 restaurantOrder: {
                     include: {
                         room: true,

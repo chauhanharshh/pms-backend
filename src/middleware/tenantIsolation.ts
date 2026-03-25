@@ -27,7 +27,9 @@ export const tenantIsolation = (
 
     // Super Admin has full visibility and can optionally set hotel context.
     if (role === 'super_admin') {
-      if (requestedHotelId) {
+      if (requestedHotelId === 'all') {
+        req.hotelId = undefined;
+      } else if (requestedHotelId) {
         req.hotelId = requestedHotelId;
       }
       return next();
@@ -55,6 +57,10 @@ export const tenantIsolation = (
       }
 
       if (requestedHotelId) {
+        if (requestedHotelId === 'all') {
+          req.hotelId = undefined;
+          return next();
+        }
         if (!ownedHotelIds.includes(requestedHotelId)) {
           throw new BadRequestError('Selected hotel is not accessible for this admin');
         }
@@ -101,9 +107,14 @@ export const tenantIsolation = (
         const ownedIds = ownedHotels.map((h) => h.id);
         req.ownedHotelIds = ownedIds;
 
-        if (requestedHotelId && ownedIds.includes(requestedHotelId)) {
-          req.hotelId = requestedHotelId;
-          req.user!.hotelId = requestedHotelId;
+        if (isHotelsModule && req.method === 'GET' && req.path === '/') {
+          // Allow Boss Mode staff to see all hotels in their group
+          return next();
+        }
+
+        if (requestedHotelId === 'all' || (requestedHotelId && ownedIds.includes(requestedHotelId))) {
+          req.hotelId = requestedHotelId === 'all' ? undefined : requestedHotelId;
+          req.user!.hotelId = requestedHotelId === 'all' ? user.hotelId : requestedHotelId;
           return next();
         }
       }

@@ -46,6 +46,11 @@ export class RestaurantController {
             return user.hotelId;
         }
 
+        if (requestedId === 'all') {
+            if (await canBossCheck()) return undefined;
+            return user.hotelId;
+        }
+
         // Default to assigned hotel
         return user.hotelId;
     }
@@ -54,7 +59,7 @@ export class RestaurantController {
     async getCategories(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            const categories = await restaurantService.getCategories(hotelId);
+            const categories = await restaurantService.getCategories(hotelId || (req.ownedHotelIds as string[]));
             res.json({ status: 'success', data: categories });
         } catch (e) { next(e); }
     }
@@ -87,7 +92,7 @@ export class RestaurantController {
     async getMenuItems(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            const items = await restaurantService.getMenuItems(hotelId, req.query.categoryId as string);
+            const items = await restaurantService.getMenuItems(hotelId || (req.ownedHotelIds as string[]), req.query.categoryId as string);
             res.json({ status: 'success', data: items });
         } catch (e) { next(e); }
     }
@@ -176,7 +181,7 @@ export class RestaurantController {
     async getCheckedInRooms(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            const rooms = await restaurantService.getCheckedInRooms(hotelId);
+            const rooms = await restaurantService.getCheckedInRooms(hotelId || (req.ownedHotelIds as string[]));
             res.json({ status: 'success', data: rooms });
         } catch (e) { next(e); }
     }
@@ -184,7 +189,7 @@ export class RestaurantController {
     async getRoomsForRestaurant(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            const rooms = await restaurantService.getAllRoomsForHotel(hotelId);
+            const rooms = await restaurantService.getAllRoomsForHotel(hotelId || (req.ownedHotelIds as string[]));
             res.json({ status: 'success', data: rooms });
         } catch (e) { next(e); }
     }
@@ -219,7 +224,7 @@ export class RestaurantController {
     async getInvoices(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            const invoices = await restaurantService.getInvoices(hotelId, req.query.status as string);
+            const invoices = await restaurantService.getInvoices(hotelId || (req.ownedHotelIds as string[]), req.query.status as string);
             res.json({ status: 'success', data: invoices });
         } catch (e) { next(e); }
     }
@@ -246,7 +251,7 @@ export class RestaurantController {
     async getTables(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            const tables = await restaurantService.getTables(hotelId);
+            const tables = await restaurantService.getTables(hotelId || (req.ownedHotelIds as string[]));
             res.json({ status: 'success', data: tables });
         } catch (e) { next(e); }
     }
@@ -285,7 +290,7 @@ export class RestaurantController {
     async getKOTs(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            const kots = await restaurantService.getKOTs(hotelId, req.query.status as string);
+            const kots = await restaurantService.getKOTs(hotelId || (req.ownedHotelIds as string[]), req.query.status as string);
             res.json({ status: 'success', data: kots });
         } catch (e) { next(e); }
     }
