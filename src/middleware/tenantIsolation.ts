@@ -18,8 +18,7 @@ export const tenantIsolation = (
   const run = async () => {
     const user = req.user!;
     const role = String(user.role);
-
-    const requestedHotelId = (req.headers['x-hotel-id'] as string) || (req.query.hotelId as string);
+    const requestedHotelId = (req.headers['x-hotel-id'] as string) || (req.query.hotelId as string) || (req.body?.hotelId as string);
 
     const isHotelsModule = req.baseUrl.endsWith('/hotels');
     const allowNoHotelContext =
@@ -99,7 +98,14 @@ export const tenantIsolation = (
           },
           select: { id: true },
         });
-        req.ownedHotelIds = ownedHotels.map((h) => h.id);
+        const ownedIds = ownedHotels.map((h) => h.id);
+        req.ownedHotelIds = ownedIds;
+
+        if (requestedHotelId && ownedIds.includes(requestedHotelId)) {
+          req.hotelId = requestedHotelId;
+          req.user!.hotelId = requestedHotelId;
+          return next();
+        }
       }
     }
 
