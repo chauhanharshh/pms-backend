@@ -184,13 +184,11 @@ export class RestaurantController {
     async getRoomsForRestaurant(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            if (!hotelId) {
-                return res.json({ status: 'success', data: [] });
-            }
             const rooms = await restaurantService.getAllRoomsForHotel(hotelId);
             res.json({ status: 'success', data: rooms });
         } catch (e) { next(e); }
     }
+
 
     async generateInvoice(req: AuthRequest, res: Response, next: NextFunction) {
         try {

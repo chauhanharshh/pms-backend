@@ -244,9 +244,12 @@ export class RestaurantService {
         }));
     }
 
-    async getAllRoomsForHotel(hotelId: string) {
+    async getAllRoomsForHotel(hotelId?: string) {
+        const where: any = {};
+        if (hotelId) where.hotelId = hotelId;
+
         const rooms = await prisma.room.findMany({
-            where: { hotelId },
+            where,
             include: {
                 bookings: {
                     where: { status: { in: ['confirmed', 'checked_in'] } },
@@ -261,6 +264,7 @@ export class RestaurantService {
             },
             orderBy: [{ floor: 'asc' }, { roomNumber: 'asc' }],
         });
+
 
         return rooms.map(r => ({
             id: r.id,
