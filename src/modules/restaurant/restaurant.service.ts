@@ -189,7 +189,7 @@ export class RestaurantService {
             if (hotelId && hotelId !== 'all') where.hotelId = hotelId;
             if (status && status !== 'all') where.status = status;
             if (bookingId) where.bookingId = bookingId;
-            
+
             return await prisma.restaurantOrder.findMany({
                 where,
                 include: {

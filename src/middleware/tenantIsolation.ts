@@ -84,9 +84,29 @@ export const tenantIsolation = (
       throw new BadRequestError('Hotel user must be assigned to a hotel');
     }
 
+    // POS Boss Mode check for staff: allow access to other hotels in the group
+    const assignedHotel = await prisma.hotel.findUnique({
+      where: { id: user.hotelId },
+      select: { id: true, posBossMode: true, adminId: true, createdBy: true } as any
+    });
+
+    if (assignedHotel && (assignedHotel as any).posBossMode) {
+      const adminId = (assignedHotel as any).adminId || (assignedHotel as any).createdBy;
+      if (adminId) {
+        const ownedHotels = await prisma.hotel.findMany({
+          where: {
+            OR: [{ adminId }, { adminId: null, createdBy: adminId }],
+          },
+          select: { id: true },
+        });
+        req.ownedHotelIds = ownedHotels.map((h) => h.id);
+      }
+    }
+
     req.hotelId = user.hotelId;
     req.user!.hotelId = user.hotelId;
     return next();
+
   };
 
   run().catch(next);

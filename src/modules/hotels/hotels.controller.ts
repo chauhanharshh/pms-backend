@@ -16,18 +16,18 @@ export class HotelsController {
 
     if (role === 'super_admin') return;
 
+    const ownedHotelIds = req.ownedHotelIds || [];
+    if (ownedHotelIds.includes(hotelId)) return;
+
     if (role === 'admin') {
-      const ownedHotelIds = req.ownedHotelIds || [];
-      if (!ownedHotelIds.includes(hotelId)) {
-        throw new ForbiddenError('Access denied: hotel does not belong to this admin');
-      }
-      return;
+      throw new ForbiddenError('Access denied: hotel does not belong to this admin');
     }
 
     if (user.hotelId !== hotelId) {
       throw new ForbiddenError('Access denied: hotel does not belong to this user');
     }
   }
+
 
   private resolveBrandingHotelId(req: AuthRequest): string {
     const user = req.user!;
