@@ -608,56 +608,101 @@ export class HotelsService {
     });
   }
 
-  async getDashboardStats(hotelId?: string) {
-    const safeCount = async (query: Promise<number>): Promise<number> => {
-      try {
-        return await query;
-      } catch (error) {
-        logger.error('Dashboard count query failed', error);
-        return 0;
-      }
-    };
-
-    try {
-      if (hotelId) {
-        const [totalRooms, occupiedRooms, vacantRooms] = await Promise.all([
-          safeCount(prisma.room.count({ where: { hotelId } })),
-          safeCount(prisma.room.count({ where: { hotelId, status: 'occupied' } })),
-          safeCount(prisma.room.count({ where: { hotelId, status: 'vacant' } })),
-        ]);
-
-        return {
-          totalHotels: 1,
-          totalRooms,
-          occupiedRooms,
-          vacantRooms,
-          occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
+    async getDashboardStats(hotelId?: string) {
+        const safeCount = async (query: Promise<number>): Promise<number> => {
+            try {
+                return await query;
+            } catch (error) {
+                logger.error('Dashboard count query failed', error);
+                return 0;
+            }
         };
-      }
 
-      const [totalHotels, totalRooms, occupiedRooms, vacantRooms] = await Promise.all([
-        safeCount(prisma.hotel.count({ where: { isActive: true } })),
-        safeCount(prisma.room.count()),
-        safeCount(prisma.room.count({ where: { status: 'occupied' } })),
-        safeCount(prisma.room.count({ where: { status: 'vacant' } })),
-      ]);
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
 
-      return {
-        totalHotels,
-        totalRooms,
-        occupiedRooms,
-        vacantRooms,
-        occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
-      };
-    } catch (error) {
-      logger.error('Dashboard API error in getDashboardStats', error);
-      return {
-        totalHotels: hotelId ? 1 : 0,
-        totalRooms: 0,
-        occupiedRooms: 0,
-        vacantRooms: 0,
-        occupancyRate: 0,
-      };
+        try {
+            if (hotelId) {
+                const [totalRooms, occupiedRooms, vacantRooms, todayReservations, todayCheckIns] = await Promise.all([
+                    safeCount(prisma.room.count({ where: { hotelId } })),
+                    safeCount(prisma.room.count({ where: { hotelId, status: 'occupied' } })),
+                    safeCount(prisma.room.count({ where: { hotelId, status: 'vacant' } })),
+                    safeCount(prisma.booking.count({
+                        where: {
+                            hotelId,
+                            OR: [
+                                { createdAt: { gte: todayStart, lte: todayEnd } },
+                                { checkInDate: { gte: todayStart, lte: todayEnd } }
+                            ],
+                            isDeleted: false
+                        }
+                    })),
+                    safeCount(prisma.booking.count({
+                        where: {
+                            hotelId,
+                            checkInDate: { gte: todayStart, lte: todayEnd },
+                            status: { in: ['pending', 'confirmed'] },
+                            isDeleted: false
+                        }
+                    })),
+                ]);
+
+                return {
+                    totalHotels: 1,
+                    totalRooms,
+                    occupiedRooms,
+                    vacantRooms,
+                    occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
+                    todayReservations,
+                    todayCheckIns
+                };
+            }
+
+            const [totalHotels, totalRooms, occupiedRooms, vacantRooms, todayReservations, todayCheckIns] = await Promise.all([
+                safeCount(prisma.hotel.count({ where: { isActive: true } })),
+                safeCount(prisma.room.count()),
+                safeCount(prisma.room.count({ where: { status: 'occupied' } })),
+                safeCount(prisma.room.count({ where: { status: 'vacant' } })),
+                safeCount(prisma.booking.count({
+                    where: {
+                        OR: [
+                            { createdAt: { gte: todayStart, lte: todayEnd } },
+                            { checkInDate: { gte: todayStart, lte: todayEnd } }
+                        ],
+                        isDeleted: false
+                    }
+                })),
+                safeCount(prisma.booking.count({
+                    where: {
+                        checkInDate: { gte: todayStart, lte: todayEnd },
+                        status: { in: ['pending', 'confirmed'] },
+                        isDeleted: false
+                    }
+                })),
+            ]);
+
+            return {
+                totalHotels,
+                totalRooms,
+                occupiedRooms,
+                vacantRooms,
+                occupancyRate: totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0,
+                todayReservations,
+                todayCheckIns
+            };
+        } catch (error) {
+            logger.error('Dashboard API error in getDashboardStats', error);
+            return {
+                totalHotels: hotelId ? 1 : 0,
+                totalRooms: 0,
+                occupiedRooms: 0,
+                vacantRooms: 0,
+                occupancyRate: 0,
+                todayReservations: 0,
+                todayCheckIns: 0
+            };
+        }
     }
-  }
 }
