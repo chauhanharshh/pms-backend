@@ -74,7 +74,47 @@ export class BookingsService {
       });
     }
 
-    throw new BadRequestError('Unsupported booking update');
+    // Allow general updates for pending/confirmed/checked-in bookings
+    if (booking.status === 'checked_out' || booking.status === 'cancelled') {
+        throw new BadRequestError('Cannot update a cancelled or checked-out booking');
+    }
+
+    const {
+        guestName,
+        guestPhone,
+        guestEmail,
+        checkInDate,
+        checkOutDate,
+        checkInTime,
+        checkOutTime,
+        adults,
+        children,
+        plan,
+        roomPrice,
+        advanceAmount,
+        totalAmount,
+    } = data;
+
+    return prisma.booking.update({
+        where: { id: bookingId },
+        data: {
+            guestName,
+            guestPhone,
+            guestEmail,
+            checkInDate: checkInDate ? new Date(checkInDate) : undefined,
+            checkOutDate: checkOutDate ? new Date(checkOutDate) : undefined,
+            checkInTime,
+            checkOutTime,
+            adults: adults !== undefined ? Number(adults) : undefined,
+            children: children !== undefined ? Number(children) : undefined,
+            plan,
+            roomPrice: roomPrice !== undefined ? new Decimal(roomPrice.toString()) : undefined,
+            advanceAmount: advanceAmount !== undefined ? new Decimal(advanceAmount.toString()) : undefined,
+            totalAmount: totalAmount !== undefined ? new Decimal(totalAmount.toString()) : undefined,
+            updatedBy: userId,
+        },
+        include: { room: { include: { roomType: true } }, bill: true },
+    });
   }
 
   async createReservation(data: any, hotelId: string, userId: string) {
