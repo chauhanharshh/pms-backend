@@ -25,7 +25,13 @@ export class RestaurantController {
             return !!(assignedHotel && ((assignedHotel as any).posBossMode || String(user.role) === 'restaurant_staff' || String(user.role) === 'restaurant_admin'));
         };
 
-        // If a specific different hotel is requested, check boss mode eligibility
+        // 1. Handle "all" sentinel first to prevent UUID validation crashes
+        if (requestedId === 'all') {
+            if (await canBossCheck()) return undefined;
+            return user.hotelId;
+        }
+
+        // 2. If a specific different hotel is requested, check boss mode eligibility
         if (requestedId && requestedId !== user.hotelId) {
             if (await canBossCheck()) {
                 return requestedId;
@@ -42,11 +48,6 @@ export class RestaurantController {
 
         if (!requestedId) {
             // If No hotelId specified, return undefined (all) ONLY if they have Boss Mode / is admin
-            if (await canBossCheck()) return undefined;
-            return user.hotelId;
-        }
-
-        if (requestedId === 'all') {
             if (await canBossCheck()) return undefined;
             return user.hotelId;
         }
