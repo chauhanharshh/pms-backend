@@ -1136,8 +1136,12 @@ export class RestaurantService {
         });
     }
 
-    async getInvoices(hotelId?: string | string[], status?: string) {
+    async getInvoices(hotelId?: string | string[], status?: string, adminId?: string) {
         const where: any = { type: 'RESTAURANT', isDeleted: false };
+        
+        if (adminId) {
+            where.hotel = { adminId };
+        }
         if (hotelId) {
             if (Array.isArray(hotelId)) {
                 where.hotelId = { in: hotelId };

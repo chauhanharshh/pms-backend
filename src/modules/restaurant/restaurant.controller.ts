@@ -22,7 +22,7 @@ export class RestaurantController {
             const ownHotelId = user.hotelId;
             if (!ownHotelId) return false;
             const assignedHotel = await prisma.hotel.findUnique({ where: { id: ownHotelId } });
-            return !!(assignedHotel && (assignedHotel as any).posBossMode);
+            return !!(assignedHotel && ((assignedHotel as any).posBossMode || String(user.role) === 'restaurant_staff' || String(user.role) === 'restaurant_admin'));
         };
 
         // If a specific different hotel is requested, check boss mode eligibility
@@ -224,7 +224,12 @@ export class RestaurantController {
     async getInvoices(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            const invoices = await restaurantService.getInvoices(hotelId || (req.ownedHotelIds as string[]), req.query.status as string);
+            const adminId = req.query.adminId as string;
+            const invoices = await restaurantService.getInvoices(
+                hotelId || (req.ownedHotelIds as string[]), 
+                req.query.status as string,
+                adminId
+            );
             res.json({ status: 'success', data: invoices });
         } catch (e) { next(e); }
     }
