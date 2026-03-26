@@ -47,6 +47,8 @@ model Hotel {
   invoiceLine1Size       Int?                   @default(14)
   invoiceLine2Size       Int?                   @default(16)
   showInvoiceWatermark   Boolean                @default(true)
+  restaurantRoomCardColor String?                @default("#0781b6") @db.VarChar(20)
+  restaurantRoomCardTextColor String?            @default("#ffffff") @db.VarChar(20)
   advancePayments        AdvancePayment[]
   bills                  Bill[]
   bookings               Booking[]

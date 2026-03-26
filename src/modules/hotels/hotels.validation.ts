@@ -33,6 +33,8 @@ export const createHotelSchema = z.object({
   invoiceHotelNameColor: z.string().optional().nullable(),
   invoiceHeaderColor: z.string().optional().nullable(),
   showInvoiceWatermark: z.boolean().optional(),
+  restaurantRoomCardColor: z.string().optional().nullable(),
+  restaurantRoomCardTextColor: z.string().optional().nullable(),
 });
 
 export const updateHotelSchema = createHotelSchema.partial();
