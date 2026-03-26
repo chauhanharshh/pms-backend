@@ -50,6 +50,7 @@ router.get('/day-closing', restaurantController.getRestaurantDayClosingSummary.b
 router.post('/day-closing', restaurantController.closeRestaurantDay.bind(restaurantController));
 router.post('/kots/invoice/combined', restaurantController.generateCombinedInvoiceFromKOTs.bind(restaurantController));
 router.put('/kots/:id', restaurantController.updateKOT.bind(restaurantController));
+router.patch('/kots/:id', restaurantController.updateKOT.bind(restaurantController)); // Added: Modify KOT mode — reuses POS/Billing UI for editing
 router.delete('/kots/:id', restaurantController.deleteKOT.bind(restaurantController));
 router.post('/kots/:id/convert', restaurantController.convertKOTToInvoice.bind(restaurantController));
 

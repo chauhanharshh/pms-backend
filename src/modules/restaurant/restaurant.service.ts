@@ -192,8 +192,14 @@ export class RestaurantService {
     async getOrders(hotelId?: string | string[], status?: string, bookingId?: string) {
         try {
             const where: any = { isDeleted: false };
-            if (hotelId && hotelId !== 'all') {
-                where.hotelId = Array.isArray(hotelId) ? { in: hotelId } : hotelId;
+            const isValidUUID = (id: any) => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id));
+
+            if (hotelId) {
+                if (Array.isArray(hotelId)) {
+                    where.hotelId = { in: hotelId.filter(isValidUUID) };
+                } else if (isValidUUID(hotelId)) {
+                    where.hotelId = hotelId;
+                }
             }
             if (status && status !== 'all') where.status = status;
             if (bookingId) where.bookingId = bookingId;
@@ -917,10 +923,12 @@ export class RestaurantService {
 
     async getKOTs(hotelId?: string | string[], status?: string) {
         const where: any = { isDeleted: false };
+        const isValidUUID = (id: any) => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id));
+
         if (hotelId) {
             if (Array.isArray(hotelId)) {
-                where.hotelId = { in: hotelId };
-            } else {
+                where.hotelId = { in: hotelId.filter(isValidUUID) };
+            } else if (isValidUUID(hotelId)) {
                 where.hotelId = hotelId;
             }
         }
@@ -1007,13 +1015,14 @@ export class RestaurantService {
 
 
     async updateKOT(kotId: string, hotelId: string, data: any, userId: string) {
+        // Added: Modify KOT mode — reuses POS/Billing UI for editing
         const kot = await (prisma.restaurantKOT as any).findFirst({
             where: { id: kotId, hotelId, isDeleted: false } as any,
             include: { order: true }
         });
 
         if (!kot) throw new NotFoundError('KOT not found');
-        if ((kot as any).status !== 'OPEN') throw new BadRequestError('Cannot edit converted or cancelled KOT');
+        if ((kot as any).status !== 'OPEN') throw new BadRequestError('Only OPEN KOTs can be modified');
 
         return prisma.$transaction(async (tx) => {
             // Update items in KOT and Order if provided
@@ -1032,7 +1041,7 @@ export class RestaurantService {
                 // 1. Update Restaurant Order Items
                 await (tx.restaurantOrderItem as any).deleteMany({ where: { orderId: (kot as any).orderId } });
                 await (tx.restaurantOrderItem as any).createMany({
-                    data: items.map(item => ({
+                    data: items.map((item: any) => ({
                         orderId: (kot as any).orderId,
                         menuItemId: item.menuItemId,
                         quantity: item.quantity,
@@ -1042,11 +1051,17 @@ export class RestaurantService {
                     })) as any
                 });
 
-                // 2. Update Order Totals
+                // 2. Update Order Details (Items, Table, Room, Steward)
                 await (tx.restaurantOrder as any).update({
                     where: { id: (kot as any).orderId },
                     data: {
                         subtotal, discount, gst, serviceCharge, totalAmount,
+                        tableNumber: data.tableNumber !== undefined ? data.tableNumber : (kot as any).order.tableNumber,
+                        roomId: data.roomId !== undefined ? data.roomId : (kot as any).order.roomId,
+                        stewardId: data.stewardId !== undefined ? data.stewardId : (kot as any).order.stewardId,
+                        bookingId: data.bookingId !== undefined ? data.bookingId : (kot as any).order.bookingId,
+                        guestName: data.guestName !== undefined ? data.guestName : (kot as any).order.guestName,
+                        stewardName: data.stewardName !== undefined ? data.stewardName : (kot as any).order.stewardName,
                         updatedBy: userId
                     } as any
                 });
@@ -1142,10 +1157,12 @@ export class RestaurantService {
         if (adminId) {
             where.hotel = { adminId };
         }
+        const isValidUUID = (id: any) => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id));
+
         if (hotelId) {
             if (Array.isArray(hotelId)) {
-                where.hotelId = { in: hotelId };
-            } else {
+                where.hotelId = { in: hotelId.filter(isValidUUID) };
+            } else if (isValidUUID(hotelId)) {
                 where.hotelId = hotelId;
             }
         }
