@@ -63,9 +63,11 @@ export class HotelsController {
     try {
       const { userId, role } = req.user!;
       const normalizedRole = String(role);
-      const listHotelContext = req.hotelId;
       const { adminId } = req.query as { adminId?: string };
-      const hotels = await hotelsService.getAllHotels(userId, normalizedRole, listHotelContext, req.ownedHotelIds, adminId);
+      // For Admin role: ignore the specific hotel context (listHotelContext) so they can see all their hotels in dropdowns/lists,
+      // UNLESS they specifically requested one via query (unlikely for this endpoint).
+      const finalContext = normalizedRole === 'admin' ? undefined : req.hotelId;
+      const hotels = await hotelsService.getAllHotels(userId, normalizedRole, finalContext, req.ownedHotelIds, adminId);
       return ResponseHandler.success(res, hotels);
     } catch (error) {
       next(error);
