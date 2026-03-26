@@ -131,9 +131,15 @@ export class RestaurantService {
     async updateCategory(categoryId: string, hotelId: string, data: any, userId: string) {
         const cat = await prisma.restaurantCategory.findFirst({ where: { id: categoryId, hotelId } });
         if (!cat) throw new NotFoundError('Category not found');
+        const updateData: any = {};
+        const allowedFields = ['name', 'description', 'isActive', 'image', 'sortOrder'];
+        allowedFields.forEach(field => {
+            if (data[field] !== undefined) updateData[field] = data[field];
+        });
+
         return prisma.restaurantCategory.update({
             where: { id: categoryId },
-            data: { ...data, updatedBy: userId },
+            data: { ...updateData, updatedBy: userId },
         });
     }
 
@@ -175,11 +181,38 @@ export class RestaurantService {
     async updateMenuItem(itemId: string, hotelId: string, data: any, userId: string) {
         const item = await prisma.restaurantMenu.findFirst({ where: { id: itemId, hotelId } });
         if (!item) throw new NotFoundError('Menu item not found');
-        return prisma.restaurantMenu.update({
-            where: { id: itemId },
-            data: { ...data, updatedBy: userId },
-            include: { category: true },
+        const updateData: any = {};
+        const allowedFields = [
+            'itemName', 'description', 'price', 'taxRate', 
+            'isAvailable', 'isVeg', 'preparationTime', 'categoryId',
+            'image', 'sortOrder', 'spicyLevel', 'isJain', 'isEgg'
+        ];
+        
+        allowedFields.forEach(field => {
+            if (data[field] !== undefined) {
+                if (field === 'price' || field === 'taxRate') {
+                    updateData[field] = Number(data[field]);
+                } else {
+                    updateData[field] = data[field];
+                }
+            }
         });
+
+        try {
+            return await prisma.restaurantMenu.update({
+                where: { id: String(itemId) },
+                data: { ...updateData, updatedBy: String(userId) },
+                include: { category: true },
+            });
+        } catch (error: any) {
+            console.error('PRISMA UPDATE ERROR:', {
+                message: error.message,
+                code: error.code,
+                meta: error.meta,
+                data: updateData
+            });
+            throw error;
+        }
     }
 
     async deleteMenuItem(itemId: string, hotelId: string) {

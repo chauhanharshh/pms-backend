@@ -109,9 +109,13 @@ export class RestaurantController {
     async updateMenuItem(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = req.hotelId || req.body.hotelId;
+            console.log('UPDATING MENU ITEM:', { id: req.params.id, hotelId, body: req.body });
             const item = await restaurantService.updateMenuItem(req.params.id, hotelId, req.body, req.user!.userId);
             res.json({ status: 'success', data: item });
-        } catch (e) { next(e); }
+        } catch (e: any) { 
+            console.error('CONTROLLER UPDATE ERROR:', e);
+            next(e); 
+        }
     }
 
     async deleteMenuItem(req: AuthRequest, res: Response, next: NextFunction) {
