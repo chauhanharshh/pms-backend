@@ -125,7 +125,7 @@ export class HotelsService {
     };
   }
 
-  async getAllHotels(userId: string, role: string, hotelId?: string, ownedHotelIds?: string[]) {
+  async getAllHotels(userId: string, role: string, hotelId?: string, ownedHotelIds?: string[], adminId?: string) {
     try {
       if (role === 'super_admin') {
         return prisma.hotel.findMany({
@@ -153,6 +153,14 @@ export class HotelsService {
         });
       }
 
+      // For Restaurant Staff or when adminId is manually provided (and authorized)
+      if (adminId && (role === 'restaurant_staff' || role === 'restaurant_admin' || role === 'hotel_manager')) {
+        return prisma.hotel.findMany({
+          where: { adminId },
+          orderBy: { name: 'asc' },
+        });
+      }
+
       if (!hotelId) {
         throw new ForbiddenError('Hotel user must have assigned hotel');
       }
@@ -164,7 +172,7 @@ export class HotelsService {
       if (!assignedHotel) return [];
 
       // If POS Boss Mode is enabled for this hotel, allow seeing all hotels
-      if ((assignedHotel as any).posBossMode) {
+      if (role === 'restaurant_staff' || role === 'restaurant_admin' || (assignedHotel as any).posBossMode) {
         const assignedAdminId = (assignedHotel as any).adminId;
         const assignedCreatedBy = (assignedHotel as any).createdBy;
 

@@ -64,7 +64,8 @@ export class HotelsController {
       const { userId, role } = req.user!;
       const normalizedRole = String(role);
       const listHotelContext = req.hotelId;
-      const hotels = await hotelsService.getAllHotels(userId, normalizedRole, listHotelContext, req.ownedHotelIds);
+      const { adminId } = req.query as { adminId?: string };
+      const hotels = await hotelsService.getAllHotels(userId, normalizedRole, listHotelContext, req.ownedHotelIds, adminId);
       return ResponseHandler.success(res, hotels);
     } catch (error) {
       next(error);
