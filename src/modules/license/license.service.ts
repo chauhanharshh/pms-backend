@@ -387,8 +387,12 @@ export class LicenseService {
 
     const adminId = user.hotel.adminId;
 
-    const license = await (prisma as any).license.findUnique({
-      where: { adminId }
+    const license = await (prisma as any).license.findFirst({
+      where: { 
+        adminId,
+        status: 'active'
+      },
+      orderBy: { expiryDate: 'desc' }
     });
 
     if (!license) {
