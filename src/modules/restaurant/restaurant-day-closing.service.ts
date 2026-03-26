@@ -311,7 +311,7 @@ export class RestaurantDayClosingService {
       throw new ConflictError(`Restaurant day already closed for ${displayDate}`);
     }
 
-    const summary = await this.getSummary(hotelId, displayDate);
+    const summary = (await this.getSummary(hotelId, displayDate)) as RestaurantDaySummary;
 
     await prisma.$transaction(async (tx) => {
       await (tx.restaurantKOT as any).updateMany({
