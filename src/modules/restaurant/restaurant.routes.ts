@@ -55,6 +55,7 @@ router.delete('/kots/:id', restaurantController.deleteKOT.bind(restaurantControl
 router.post('/kots/:id/convert', restaurantController.convertKOTToInvoice.bind(restaurantController));
 
 // Invoices
+router.get('/invoices/stats', restaurantController.getInvoiceStats.bind(restaurantController));
 router.get('/invoices', restaurantController.getInvoices.bind(restaurantController));
 router.put('/invoices/:id', restaurantController.updateInvoice.bind(restaurantController));
 router.post('/invoices/:id/pay', restaurantController.payInvoice.bind(restaurantController));

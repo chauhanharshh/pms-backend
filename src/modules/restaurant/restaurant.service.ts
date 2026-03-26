@@ -1217,6 +1217,51 @@ export class RestaurantService {
         });
     }
 
+    async getInvoiceStats(hotelId?: string | string[], adminId?: string) {
+        const where: any = { type: 'RESTAURANT', isDeleted: false };
+        
+        if (adminId) {
+            where.hotel = { adminId };
+        }
+        const isValidUUID = (id: any) => id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id));
+
+        if (hotelId) {
+            if (Array.isArray(hotelId)) {
+                where.hotelId = { in: hotelId.filter(isValidUUID) };
+            } else if (isValidUUID(hotelId)) {
+                where.hotelId = hotelId;
+            }
+        }
+
+        const invoices = await (prisma.invoice as any).findMany({
+            where,
+            select: {
+                status: true,
+                totalAmount: true
+            }
+        });
+
+        const stats = {
+            totalBills: invoices.length,
+            collected: 0,
+            pending: 0,
+            cancelled: 0
+        };
+
+        invoices.forEach((inv: any) => {
+            const amount = Number(inv.totalAmount || 0);
+            if (inv.status === 'paid') {
+                stats.collected += amount;
+            } else if (inv.status === 'cancelled') {
+                stats.cancelled += 1;
+            } else {
+                stats.pending += amount;
+            }
+        });
+
+        return stats;
+    }
+
     async updateInvoice(invoiceId: string, hotelId: string, data: any, userId: string) {
         const invoice = await (prisma.invoice as any).findFirst({
             where: { id: invoiceId, hotelId, type: 'RESTAURANT' },

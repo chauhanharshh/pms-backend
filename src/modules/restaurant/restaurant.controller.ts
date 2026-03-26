@@ -281,6 +281,18 @@ export class RestaurantController {
         } catch (e) { next(e); }
     }
 
+    async getInvoiceStats(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const hotelId = await this.getAuthorizedHotelId(req, 'query');
+            const adminId = req.query.adminId as string;
+            const stats = await restaurantService.getInvoiceStats(
+                hotelId || (req.ownedHotelIds as string[]),
+                adminId || (req.user as any)?.adminId
+            );
+            res.json({ status: 'success', data: stats });
+        } catch (e) { next(e); }
+    }
+
     async updateInvoice(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = req.hotelId || req.body.hotelId;
