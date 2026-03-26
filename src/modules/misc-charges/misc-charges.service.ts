@@ -8,16 +8,21 @@ export class MiscChargesService {
         const charges = await prisma.miscCharge.findMany({
             where,
             include: {
-                booking: { select: { id: true, guestName: true, room: { select: { roomNumber: true } } } },
+                booking: { select: { id: true, guestName: true, room: { select: { roomNumber: true } }, bill: { select: { invoice: { select: { status: true } } } } } },
                 room: { select: { id: true, roomNumber: true } },
             },
             orderBy: { chargeDate: 'desc' },
         });
-        return charges.map(c => ({
-            ...c,
-            guestName: c.booking?.guestName || null,
-            roomNumber: c.room?.roomNumber || c.booking?.room?.roomNumber || null
-        }));
+        return charges.map(c => {
+            const invoiceStatus = c.booking?.bill?.invoice?.status;
+            const status = invoiceStatus === 'paid' ? 'PAID' : 'PENDING';
+            return {
+                ...c,
+                guestName: c.booking?.guestName || null,
+                roomNumber: c.room?.roomNumber || c.booking?.room?.roomNumber || null,
+                status
+            };
+        });
     }
 
     async createMiscCharge(data: any, hotelId: string, userId: string) {
