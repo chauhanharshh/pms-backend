@@ -182,16 +182,24 @@ export class RestaurantController {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
             const adminId = req.query.adminId as string;
+            const safeAdminId = adminId || (req.user as any)?.adminId || (req.user as any)?.userId;
             
             // Fixed: added adminId support to prevent 500 on multi-hotel fetch
             let targetHotelIds: string | string[] | undefined = hotelId || (req.ownedHotelIds as string[]);
             
-            if (!hotelId && adminId) {
+            if (!hotelId && safeAdminId) {
                 const hotels = await prisma.hotel.findMany({
-                    where: { adminId },
+                    where: { adminId: safeAdminId },
                     select: { id: true }
                 });
-                targetHotelIds = hotels.map(h => h.id);
+                if (hotels.length > 0) {
+                    targetHotelIds = hotels.map(h => h.id);
+                }
+            }
+
+            // Fallback to all owned hotels if no specific hotelId and no adminId override
+            if (!hotelId && !safeAdminId && req.ownedHotelIds) {
+                targetHotelIds = req.ownedHotelIds as string[];
             }
 
             const rooms = await restaurantService.getCheckedInRooms(targetHotelIds);
@@ -203,16 +211,24 @@ export class RestaurantController {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
             const adminId = req.query.adminId as string;
+            const safeAdminId = adminId || (req.user as any)?.adminId || (req.user as any)?.userId;
 
             // Fixed: added adminId support to prevent 500 on multi-hotel fetch
             let targetHotelIds: string | string[] | undefined = hotelId || (req.ownedHotelIds as string[]);
 
-            if (!hotelId && adminId) {
+            if (!hotelId && safeAdminId) {
                 const hotels = await prisma.hotel.findMany({
-                    where: { adminId },
+                    where: { adminId: safeAdminId },
                     select: { id: true }
                 });
-                targetHotelIds = hotels.map(h => h.id);
+                if (hotels.length > 0) {
+                    targetHotelIds = hotels.map(h => h.id);
+                }
+            }
+
+            // Fallback to all owned hotels if no specific hotelId and no adminId override
+            if (!hotelId && !safeAdminId && req.ownedHotelIds) {
+                targetHotelIds = req.ownedHotelIds as string[];
             }
 
             const rooms = await restaurantService.getAllRoomsForHotel(targetHotelIds);
@@ -254,7 +270,7 @@ export class RestaurantController {
             const invoices = await restaurantService.getInvoices(
                 hotelId || (req.ownedHotelIds as string[]), 
                 req.query.status as string,
-                adminId
+                adminId || (req.user as any)?.adminId
             );
             res.json({ status: 'success', data: invoices });
         } catch (e) { next(e); }
@@ -282,7 +298,22 @@ export class RestaurantController {
     async getTables(req: AuthRequest, res: Response, next: NextFunction) {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
-            const tables = await restaurantService.getTables(hotelId || (req.ownedHotelIds as string[]));
+            const adminId = req.query.adminId as string;
+            const safeAdminId = adminId || (req.user as any)?.adminId || (req.user as any)?.userId;
+
+            let targetHotelIds: string | string[] | undefined = hotelId || (req.ownedHotelIds as string[]);
+
+            if (!hotelId && safeAdminId) {
+                const hotels = await prisma.hotel.findMany({
+                    where: { adminId: safeAdminId },
+                    select: { id: true }
+                });
+                if (hotels.length > 0) {
+                    targetHotelIds = hotels.map(h => h.id);
+                }
+            }
+
+            const tables = await restaurantService.getTables(targetHotelIds);
             res.json({ status: 'success', data: tables });
         } catch (e) { next(e); }
     }
@@ -322,16 +353,19 @@ export class RestaurantController {
         try {
             const hotelId = await this.getAuthorizedHotelId(req, 'query');
             const adminId = req.query.adminId as string;
+            const safeAdminId = adminId || (req.user as any)?.adminId || (req.user as any)?.userId;
 
             // Fixed: added adminId support to prevent 500 on multi-hotel fetch
             let targetHotelIds: string | string[] | undefined = hotelId || (req.ownedHotelIds as string[]);
 
-            if (!hotelId && adminId) {
+            if (!hotelId && safeAdminId) {
                 const hotels = await prisma.hotel.findMany({
-                    where: { adminId },
+                    where: { adminId: safeAdminId },
                     select: { id: true }
                 });
-                targetHotelIds = hotels.map(h => h.id);
+                if (hotels.length > 0) {
+                    targetHotelIds = hotels.map(h => h.id);
+                }
             }
 
             const kots = await restaurantService.getKOTs(targetHotelIds, req.query.status as string);
