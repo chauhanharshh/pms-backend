@@ -4,6 +4,8 @@ import { BadRequestError, ConflictError } from '../../utils/errors';
 
 interface RestaurantDaySummary {
   date: string;
+  hotelId: string;
+  hotelName: string;
   totalKotsToday: number;
   openKots: number;
   convertedKots: number;
@@ -20,6 +22,7 @@ interface RestaurantDaySummary {
 type DayClosingRow = {
   id: string;
   hotel_id: string;
+  hotel_name: string;
   closing_date: Date;
   total_kots: number;
   open_kots: number;
@@ -144,6 +147,8 @@ export class RestaurantDayClosingService {
 
     return {
       date: `${dd}-${mm}-${yyyy}`,
+      hotelId: row.hotel_id,
+      hotelName: row.hotel_name || 'Unknown Hotel',
       totalKotsToday: Number(row.total_kots || 0),
       openKots: Number(row.open_kots || 0),
       convertedKots: Number(row.converted_kots || 0),
@@ -158,11 +163,14 @@ export class RestaurantDayClosingService {
     };
   }
 
-  async getHistory(hotelId: string, rawFromDate?: string, rawToDate?: string): Promise<RestaurantDaySummary[]> {
+  async getHistory(hotelId: string | string[], rawFromDate?: string, rawToDate?: string): Promise<RestaurantDaySummary[]> {
     await this.ensureRestaurantDayClosingInfrastructure();
 
-    const params: Array<string> = [hotelId];
-    const whereClauses: string[] = ['hotel_id = $1::uuid'];
+    const hotelIds = Array.isArray(hotelId) ? hotelId : [hotelId];
+    if (hotelIds.length === 0) return [];
+
+    const params: Array<any> = [hotelIds];
+    const whereClauses: string[] = ['hotel_id = ANY($1::uuid[])'];
 
     if (rawFromDate) {
       const { dateOnly } = this.parseDateInput(rawFromDate);
@@ -178,10 +186,11 @@ export class RestaurantDayClosingService {
 
     const rows = await prisma.$queryRawUnsafe<DayClosingHistoryRow[]>(
       `
-        SELECT *
-        FROM restaurant_day_closings
+        SELECT dc.*, h.name as hotel_name
+        FROM restaurant_day_closings dc
+        JOIN hotels h ON dc.hotel_id = h.id
         WHERE ${whereClauses.join(' AND ')}
-        ORDER BY closing_date DESC
+        ORDER BY closing_date DESC, h.name ASC
       `,
       ...params,
     );
@@ -189,97 +198,108 @@ export class RestaurantDayClosingService {
     return rows.map((row) => this.mapStoredClosingToSummary(row));
   }
 
-  async getSummary(hotelId: string, rawDate?: string): Promise<RestaurantDaySummary> {
+  async getSummary(hotelId: string | string[], rawDate?: string): Promise<RestaurantDaySummary | RestaurantDaySummary[]> {
     await this.ensureRestaurantDayClosingInfrastructure();
     const { start, end, displayDate, dateOnly } = this.parseDateInput(rawDate);
 
-    const [
-      totalKotsToday,
-      openKots,
-      convertedKots,
-      cancelledKots,
-      ordersAggregate,
-      totalInvoicesToday,
-      storedClosing,
-    ] = await Promise.all([
-      (prisma.restaurantKOT as any).count({
-        where: {
-          hotelId,
-          isDeleted: false,
-          printedAt: { gte: start, lte: end },
-        },
-      }),
-      (prisma.restaurantKOT as any).count({
-        where: {
-          hotelId,
-          isDeleted: false,
-          status: 'OPEN',
-          printedAt: { gte: start, lte: end },
-        },
-      }),
-      (prisma.restaurantKOT as any).count({
-        where: {
-          hotelId,
-          isDeleted: false,
-          status: 'CONVERTED',
-          printedAt: { gte: start, lte: end },
-        },
-      }),
-      (prisma.restaurantKOT as any).count({
-        where: {
-          hotelId,
-          isDeleted: false,
-          status: 'CANCELLED',
-          printedAt: { gte: start, lte: end },
-        },
-      }),
-      (prisma.restaurantOrder as any).aggregate({
-        where: {
-          hotelId,
-          isDeleted: false,
-          createdAt: { gte: start, lte: end },
-        },
-        _sum: {
-          subtotal: true,
-          serviceCharge: true,
-        },
-      }),
-      (prisma.invoice as any).count({
-        where: {
-          hotelId,
-          type: 'RESTAURANT',
-          isDeleted: false,
-          createdAt: { gte: start, lte: end },
-        },
-      }),
-      this.getStoredClosing(hotelId, dateOnly),
-    ]);
+    const hotelIds = Array.isArray(hotelId) ? hotelId : [hotelId];
+    if (hotelIds.length === 0) return [];
 
-    const totalOrdersAmount = Number(ordersAggregate?._sum?.subtotal || 0);
-    const serviceChargeAmount = Number(ordersAggregate?._sum?.serviceCharge || 0);
-    const totalRevenueToday = totalOrdersAmount + serviceChargeAmount;
+    const summaries = await Promise.all(hotelIds.map(async (hid) => {
+      const [
+        hotel,
+        totalKotsToday,
+        openKots,
+        convertedKots,
+        cancelledKots,
+        ordersAggregate,
+        totalInvoicesToday,
+        storedClosing,
+      ] = await Promise.all([
+        prisma.hotel.findUnique({ where: { id: hid }, select: { name: true } }),
+        (prisma.restaurantKOT as any).count({
+          where: {
+            hotelId: hid,
+            isDeleted: false,
+            printedAt: { gte: start, lte: end },
+          },
+        }),
+        (prisma.restaurantKOT as any).count({
+          where: {
+            hotelId: hid,
+            isDeleted: false,
+            status: 'OPEN',
+            printedAt: { gte: start, lte: end },
+          },
+        }),
+        (prisma.restaurantKOT as any).count({
+          where: {
+            hotelId: hid,
+            isDeleted: false,
+            status: 'CONVERTED',
+            printedAt: { gte: start, lte: end },
+          },
+        }),
+        (prisma.restaurantKOT as any).count({
+          where: {
+            hotelId: hid,
+            isDeleted: false,
+            status: 'CANCELLED',
+            printedAt: { gte: start, lte: end },
+          },
+        }),
+        (prisma.restaurantOrder as any).aggregate({
+          where: {
+            hotelId: hid,
+            isDeleted: false,
+            createdAt: { gte: start, lte: end },
+          },
+          _sum: {
+            subtotal: true,
+            serviceCharge: true,
+          },
+        }),
+        (prisma.invoice as any).count({
+          where: {
+            hotelId: hid,
+            type: 'RESTAURANT',
+            isDeleted: false,
+            createdAt: { gte: start, lte: end },
+          },
+        }),
+        this.getStoredClosing(hid, dateOnly),
+      ]);
 
-    if (storedClosing) {
+      const totalOrdersAmount = Number(ordersAggregate?._sum?.subtotal || 0);
+      const serviceChargeAmount = Number(ordersAggregate?._sum?.serviceCharge || 0);
+      const totalRevenueToday = totalOrdersAmount + serviceChargeAmount;
+
+      if (storedClosing) {
+        return {
+          ...this.mapStoredClosingToSummary({ ...storedClosing, hotel_name: hotel?.name || 'Unknown Hotel' } as any),
+          date: displayDate,
+        };
+      }
+
       return {
-        ...this.mapStoredClosingToSummary(storedClosing),
         date: displayDate,
-      };
-    }
+        hotelId: hid,
+        hotelName: hotel?.name || 'Unknown Hotel',
+        totalKotsToday,
+        openKots,
+        convertedKots,
+        cancelledKots,
+        totalOrdersAmount,
+        serviceChargeAmount,
+        totalRevenueToday,
+        totalInvoicesToday,
+        dayClosed: false,
+        closedAt: null,
+        closedBy: null,
+      } as RestaurantDaySummary;
+    }));
 
-    return {
-      date: displayDate,
-      totalKotsToday,
-      openKots,
-      convertedKots,
-      cancelledKots,
-      totalOrdersAmount,
-      serviceChargeAmount,
-      totalRevenueToday,
-      totalInvoicesToday,
-      dayClosed: false,
-      closedAt: null,
-      closedBy: null,
-    };
+    return Array.isArray(hotelId) ? summaries : summaries[0];
   }
 
   async closeDay(hotelId: string, rawDate: string | undefined, userId: string) {

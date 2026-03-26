@@ -336,19 +336,23 @@ export class RestaurantController {
 
     async getRestaurantDayClosingSummary(req: AuthRequest, res: Response, next: NextFunction) {
         try {
-            const hotelId = (await this.getAuthorizedHotelId(req, 'query')) || req.user?.hotelId;
-            if (!hotelId) throw new BadRequestError('Hotel context is required');
+            const hotelId = await this.getAuthorizedHotelId(req, 'query');
+            const targetHotelIds = hotelId ? [hotelId] : (req.ownedHotelIds || [req.user?.hotelId!].filter(Boolean));
+
+            if (targetHotelIds.length === 0) {
+                 throw new BadRequestError('Hotel context is required');
+            }
 
             const date = req.query.date as string | undefined;
             if (date) {
-                const summary = await restaurantDayClosingService.getSummary(hotelId, date);
+                const summary = await restaurantDayClosingService.getSummary(hotelId || targetHotelIds, date);
                 res.json({ status: 'success', data: summary });
                 return;
             }
 
             const fromDate = req.query.fromDate as string | undefined;
             const toDate = req.query.toDate as string | undefined;
-            const history = await restaurantDayClosingService.getHistory(hotelId, fromDate, toDate);
+            const history = await restaurantDayClosingService.getHistory(hotelId || targetHotelIds, fromDate, toDate);
             res.json({ status: 'success', data: history });
         } catch (e) { next(e); }
     }
@@ -364,7 +368,7 @@ export class RestaurantController {
                 req.user!.userId,
             );
 
-            res.status(201).json({ status: 'success', data: result, message: `Restaurant Day Closed Successfully for ${result.date}` });
+            res.status(201).json({ status: 'success', data: result, message: `Restaurant Day Closed Successfully for ${(result as any).date}` });
         } catch (e) { next(e); }
     }
 }
