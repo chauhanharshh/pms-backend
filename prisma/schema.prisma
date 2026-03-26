@@ -46,6 +46,7 @@ model Hotel {
   invoiceShowCustomLines Boolean                @default(false)
   invoiceLine1Size       Int?                   @default(14)
   invoiceLine2Size       Int?                   @default(16)
+  showInvoiceWatermark   Boolean                @default(true)
   advancePayments        AdvancePayment[]
   bills                  Bill[]
   bookings               Booking[]

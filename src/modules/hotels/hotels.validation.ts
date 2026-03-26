@@ -32,6 +32,7 @@ export const createHotelSchema = z.object({
   invoiceLine2Size: z.preprocess((val) => (val === '' ? undefined : typeof val === 'string' ? parseInt(val, 10) : val), z.number().min(8).max(40).optional().default(16)),
   invoiceHotelNameColor: z.string().optional().nullable(),
   invoiceHeaderColor: z.string().optional().nullable(),
+  showInvoiceWatermark: z.boolean().optional(),
 });
 
 export const updateHotelSchema = createHotelSchema.partial();
