@@ -313,9 +313,9 @@ export class BookingsService {
         },
       });
 
-      // 3. Create advance payment record if advance > 0
-      if (advance.gt(0)) {
-        await tx.advancePayment.create({
+      // 3 & 4. Advance payment and Room update in parallel
+      await Promise.all([
+        advance.gt(0) ? tx.advancePayment.create({
           data: {
             hotelId,
             bookingId: booking.id,
@@ -327,14 +327,12 @@ export class BookingsService {
             createdBy: userId,
             updatedBy: userId,
           },
-        });
-      }
-
-      // 4. Update room to occupied
-      await tx.room.update({
-        where: { id: data.roomId },
-        data: { status: 'occupied', updatedBy: userId },
-      });
+        }) : Promise.resolve(null),
+        tx.room.update({
+          where: { id: data.roomId },
+          data: { status: 'occupied', updatedBy: userId },
+        })
+      ]);
 
       logger.info(`Walk-in check-in completed: booking ${booking.id}, room ${data.roomId}`);
       return { booking, bill };
@@ -353,22 +351,22 @@ export class BookingsService {
     }
 
     return prisma.$transaction(async (tx) => {
-      const updatedBooking = await tx.booking.update({
-        where: { id: bookingId },
-        data: {
-          status: 'cancelled',
-          updatedBy: userId,
-        },
-      });
-
-      // Free up the room
-      await tx.room.update({
-        where: { id: booking.roomId },
-        data: {
-          status: 'vacant',
-          updatedBy: userId,
-        },
-      });
+      const [updatedBooking] = await Promise.all([
+        tx.booking.update({
+          where: { id: bookingId },
+          data: {
+            status: 'cancelled',
+            updatedBy: userId,
+          },
+        }),
+        tx.room.update({
+          where: { id: booking.roomId },
+          data: {
+            status: 'vacant',
+            updatedBy: userId,
+          },
+        })
+      ]);
 
       logger.info(`Booking ${bookingId} cancelled by user ${userId}`);
       return updatedBooking;
@@ -407,25 +405,26 @@ export class BookingsService {
       : booking.checkOutDate;
 
     return prisma.$transaction(async (tx) => {
-      const updatedBooking = await tx.booking.update({
-        where: { id: bookingId },
-        data: {
-          status: 'checked_in',
-          checkInDate: resolvedCheckInDate,
-          checkOutDate: resolvedCheckOutDate,
-          checkInTime: data?.checkInTime ?? booking.checkInTime,
-          checkOutTime: data?.checkOutTime ?? booking.checkOutTime,
-          plan: data?.plan ?? booking.plan,
-          roomPrice: data?.roomPrice ? new Decimal(data.roomPrice.toString()) : (booking as any).roomPrice,
-          updatedBy: userId,
-        } as any,
-        include: { room: true, advancePayments: true, hotel: true },
-      });
-
-      await tx.room.update({
-        where: { id: booking.roomId },
-        data: { status: 'occupied', updatedBy: userId },
-      });
+      const [updatedBooking] = await Promise.all([
+        tx.booking.update({
+          where: { id: bookingId },
+          data: {
+            status: 'checked_in',
+            checkInDate: resolvedCheckInDate,
+            checkOutDate: resolvedCheckOutDate,
+            checkInTime: data?.checkInTime ?? booking.checkInTime,
+            checkOutTime: data?.checkOutTime ?? booking.checkOutTime,
+            plan: data?.plan ?? booking.plan,
+            roomPrice: data?.roomPrice ? new Decimal(data.roomPrice.toString()) : (booking as any).roomPrice,
+            updatedBy: userId,
+          } as any,
+          include: { room: true, advancePayments: true, hotel: true },
+        }),
+        tx.room.update({
+          where: { id: booking.roomId },
+          data: { status: 'occupied', updatedBy: userId },
+        })
+      ]);
 
       const checkInDateTime = new Date(resolvedCheckInDate);
       const [ciH, ciM] = (data?.checkInTime ?? (booking.checkInTime || "14:00")).split(':').map(Number);
@@ -444,48 +443,51 @@ export class BookingsService {
       const taxAmount = taxInfo.amount;
       const totalAmount = roomCharges.add(taxAmount);
 
-      const bill = await tx.bill.create({
-        data: {
-          hotelId,
-          bookingId: booking.id,
-          roomCharges,
-          taxAmount,
-          subtotal: roomCharges,
-          totalAmount: totalAmount,
-          balanceDue: totalAmount,
-          createdBy: userId,
-          updatedBy: userId,
-        },
-      });
+      const [bill, advancePayment] = await Promise.all([
+        tx.bill.create({
+          data: {
+            hotelId,
+            bookingId: booking.id,
+            roomCharges,
+            taxAmount,
+            subtotal: roomCharges,
+            totalAmount: totalAmount,
+            balanceDue: totalAmount,
+            createdBy: userId,
+            updatedBy: userId,
+          },
+        }),
+        booking.advanceAmount.gt(0) 
+          ? tx.advancePayment.findFirst({ where: { bookingId: booking.id, status: 'pending' } })
+          : Promise.resolve(null)
+      ]);
 
-      if (booking.advanceAmount.gt(0)) {
-        const advancePayment = await tx.advancePayment.findFirst({
-          where: { bookingId: booking.id, status: 'pending' },
-        });
-        if (advancePayment) {
-          const usedAmount = advancePayment.amount.gt(bill.totalAmount)
-            ? bill.totalAmount
+      if (advancePayment) {
+        const usedAmount = advancePayment.amount.gt(totalAmount)
+            ? totalAmount
             : advancePayment.amount;
-          await tx.advancePayment.update({
-            where: { id: advancePayment.id },
-            data: {
-              usedAmount,
-              status: usedAmount.equals(advancePayment.amount) ? 'adjusted' : 'linked',
-            },
-          });
-          await tx.bill.update({
-            where: { id: bill.id },
-            data: {
-              paidAmount: usedAmount,
-              balanceDue: totalAmount.sub(usedAmount),
-              status: totalAmount.sub(usedAmount).lte(0) ? 'paid' : 'partial',
-            },
-          });
+
+          await Promise.all([
+            tx.advancePayment.update({
+              where: { id: advancePayment.id },
+              data: {
+                usedAmount,
+                status: usedAmount.equals(advancePayment.amount) ? 'adjusted' : 'linked',
+              },
+            }),
+            tx.bill.update({
+              where: { id: bill.id },
+              data: {
+                paidAmount: usedAmount,
+                balanceDue: totalAmount.sub(usedAmount),
+                status: totalAmount.sub(usedAmount).lte(0) ? 'paid' : 'partial',
+              },
+            })
+          ]);
         }
-      }
 
       logger.info(`Check-in completed for booking ${bookingId}`);
-      return updatedBooking;
+      return { booking: updatedBooking, bill };
     });
   }
 
