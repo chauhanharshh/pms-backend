@@ -1194,7 +1194,9 @@ export class RestaurantService {
 
         if (hotelId) {
             if (Array.isArray(hotelId)) {
-                where.hotelId = { in: hotelId.filter(isValidUUID) };
+                if (!adminId) {
+                    where.hotelId = { in: hotelId.filter(isValidUUID) };
+                }
             } else if (isValidUUID(hotelId)) {
                 where.hotelId = hotelId;
             }
@@ -1227,7 +1229,9 @@ export class RestaurantService {
 
         if (hotelId) {
             if (Array.isArray(hotelId)) {
-                where.hotelId = { in: hotelId.filter(isValidUUID) };
+                if (!adminId) {
+                    where.hotelId = { in: hotelId.filter(isValidUUID) };
+                }
             } else if (isValidUUID(hotelId)) {
                 where.hotelId = hotelId;
             }
