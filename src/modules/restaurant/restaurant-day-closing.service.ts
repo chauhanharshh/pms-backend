@@ -21,20 +21,20 @@ interface RestaurantDaySummary {
 
 type DayClosingRow = {
   id: string;
-  hotel_id: string;
-  hotel_name: string;
-  closing_date: Date;
-  total_kots: number;
-  open_kots: number;
-  converted_kots: number;
-  cancelled_kots: number;
-  total_orders_amount: string;
-  service_charge_amount: string;
-  total_revenue: string;
-  total_invoices: number;
-  closed_by: string;
-  closed_at: Date;
-  created_at: Date;
+  hotelId: string;
+  hotel_name?: string;
+  closingDate: Date;
+  totalKots: number;
+  openKots: number;
+  convertedKots: number;
+  cancelledKots: number;
+  totalOrdersAmount: string; 
+  serviceChargeAmount: string;
+  totalRevenue: string;
+  totalInvoices: number;
+  closedBy: string;
+  closedAt: Date;
+  createdAt: Date;
 };
 
 type DayClosingHistoryRow = DayClosingRow;
@@ -43,20 +43,20 @@ export class RestaurantDayClosingService {
   private readonly dayClosingTableSql = `
     CREATE TABLE IF NOT EXISTS restaurant_day_closings (
       id UUID PRIMARY KEY,
-      hotel_id UUID NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
-      closing_date DATE NOT NULL,
-      total_kots INTEGER NOT NULL DEFAULT 0,
-      open_kots INTEGER NOT NULL DEFAULT 0,
-      converted_kots INTEGER NOT NULL DEFAULT 0,
-      cancelled_kots INTEGER NOT NULL DEFAULT 0,
-      total_orders_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
-      service_charge_amount NUMERIC(12,2) NOT NULL DEFAULT 0,
-      total_revenue NUMERIC(12,2) NOT NULL DEFAULT 0,
-      total_invoices INTEGER NOT NULL DEFAULT 0,
-      closed_by UUID NOT NULL REFERENCES users(id),
-      closed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      UNIQUE (hotel_id, closing_date)
+      "hotelId" UUID NOT NULL REFERENCES hotels(id) ON DELETE CASCADE,
+      "closingDate" DATE NOT NULL,
+      "totalKots" INTEGER NOT NULL DEFAULT 0,
+      "openKots" INTEGER NOT NULL DEFAULT 0,
+      "convertedKots" INTEGER NOT NULL DEFAULT 0,
+      "cancelledKots" INTEGER NOT NULL DEFAULT 0,
+      "totalOrdersAmount" NUMERIC(12,2) NOT NULL DEFAULT 0,
+      "serviceChargeAmount" NUMERIC(12,2) NOT NULL DEFAULT 0,
+      "totalRevenue" NUMERIC(12,2) NOT NULL DEFAULT 0,
+      "totalInvoices" INTEGER NOT NULL DEFAULT 0,
+      "closedBy" UUID NOT NULL REFERENCES users(id),
+      "closedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE ("hotelId", "closingDate")
     );
   `;
 
@@ -131,7 +131,7 @@ export class RestaurantDayClosingService {
 
   private async getStoredClosing(hotelId: string, dateOnly: Date) {
     const rows = await prisma.$queryRawUnsafe<DayClosingRow[]>(
-      `SELECT * FROM restaurant_day_closings WHERE hotel_id = $1::uuid AND closing_date = $2::date LIMIT 1`,
+      `SELECT * FROM restaurant_day_closings WHERE "hotelId" = $1::uuid AND "closingDate" = $2::date LIMIT 1`,
       hotelId,
       dateOnly.toISOString().slice(0, 10),
     );
@@ -140,26 +140,26 @@ export class RestaurantDayClosingService {
   }
 
   private mapStoredClosingToSummary(row: DayClosingHistoryRow): RestaurantDaySummary {
-    const dateValue = new Date(row.closing_date);
+    const dateValue = new Date(row.closingDate);
     const dd = String(dateValue.getDate()).padStart(2, '0');
     const mm = String(dateValue.getMonth() + 1).padStart(2, '0');
     const yyyy = String(dateValue.getFullYear());
 
     return {
       date: `${dd}-${mm}-${yyyy}`,
-      hotelId: row.hotel_id,
+      hotelId: row.hotelId,
       hotelName: row.hotel_name || 'Unknown Hotel',
-      totalKotsToday: Number(row.total_kots || 0),
-      openKots: Number(row.open_kots || 0),
-      convertedKots: Number(row.converted_kots || 0),
-      cancelledKots: Number(row.cancelled_kots || 0),
-      totalOrdersAmount: Number(row.total_orders_amount || 0),
-      serviceChargeAmount: Number(row.service_charge_amount || 0),
-      totalRevenueToday: Number(row.total_revenue || 0),
-      totalInvoicesToday: Number(row.total_invoices || 0),
+      totalKotsToday: Number(row.totalKots || 0),
+      openKots: Number(row.openKots || 0),
+      convertedKots: Number(row.convertedKots || 0),
+      cancelledKots: Number(row.cancelledKots || 0),
+      totalOrdersAmount: Number(row.totalOrdersAmount || 0),
+      serviceChargeAmount: Number(row.serviceChargeAmount || 0),
+      totalRevenueToday: Number(row.totalRevenue || 0),
+      totalInvoicesToday: Number(row.totalInvoices || 0),
       dayClosed: true,
-      closedAt: row.closed_at ? new Date(row.closed_at).toISOString() : null,
-      closedBy: row.closed_by || null,
+      closedAt: row.closedAt ? new Date(row.closedAt).toISOString() : null,
+      closedBy: row.closedBy || null,
     };
   }
 
@@ -170,27 +170,27 @@ export class RestaurantDayClosingService {
     if (hotelIds.length === 0) return [];
 
     const params: Array<any> = [hotelIds];
-    const whereClauses: string[] = ['hotel_id = ANY($1::uuid[])'];
+    const whereClauses: string[] = ['"hotelId" = ANY($1::uuid[])'];
 
     if (rawFromDate) {
       const { dateOnly } = this.parseDateInput(rawFromDate);
       params.push(dateOnly.toISOString().slice(0, 10));
-      whereClauses.push(`closing_date >= $${params.length}::date`);
+      whereClauses.push(`"closingDate" >= $${params.length}::date`);
     }
 
     if (rawToDate) {
       const { dateOnly } = this.parseDateInput(rawToDate);
       params.push(dateOnly.toISOString().slice(0, 10));
-      whereClauses.push(`closing_date <= $${params.length}::date`);
+      whereClauses.push(`"closingDate" <= $${params.length}::date`);
     }
 
     const rows = await prisma.$queryRawUnsafe<DayClosingHistoryRow[]>(
       `
         SELECT dc.*, h.name as hotel_name
         FROM restaurant_day_closings dc
-        JOIN hotels h ON dc.hotel_id = h.id
+        JOIN hotels h ON dc."hotelId" = h.id
         WHERE ${whereClauses.join(' AND ')}
-        ORDER BY closing_date DESC, h.name ASC
+        ORDER BY "closingDate" DESC, h.name ASC
       `,
       ...params,
     );
@@ -330,17 +330,17 @@ export class RestaurantDayClosingService {
         `
           INSERT INTO restaurant_day_closings (
             id,
-            hotel_id,
-            closing_date,
-            total_kots,
-            open_kots,
-            converted_kots,
-            cancelled_kots,
-            total_orders_amount,
-            service_charge_amount,
-            total_revenue,
-            total_invoices,
-            closed_by
+            "hotelId",
+            "closingDate",
+            "totalKots",
+            "openKots",
+            "convertedKots",
+            "cancelledKots",
+            "totalOrdersAmount",
+            "serviceChargeAmount",
+            "totalRevenue",
+            "totalInvoices",
+            "closedBy"
           )
           VALUES (
             $1::uuid,

@@ -393,18 +393,34 @@ export class RestaurantController {
                  throw new BadRequestError('Hotel context is required');
             }
 
-            const date = req.query.date as string | undefined;
-            if (date) {
-                const summary = await restaurantDayClosingService.getSummary(targetHotelIds, date);
+            const date = (req.query.date || req.query.dateFrom || req.query.fromDate || req.query.dateTo || req.query.toDate) ? req.query.date as string : undefined;
+            
+            // If fetching a specific single day summary
+            if (req.query.date) {
+                const summary = await restaurantDayClosingService.getSummary(targetHotelIds, req.query.date as string);
                 res.json({ status: 'success', data: summary });
                 return;
             }
 
-            const fromDate = req.query.fromDate as string | undefined;
-            const toDate = req.query.toDate as string | undefined;
+            const fromDate = (req.query.dateFrom || req.query.fromDate) as string | undefined;
+            const toDate = (req.query.dateTo || req.query.toDate) as string | undefined;
+
+            // Fixed: If no dates are provided for history, return empty array instead of crashing or returning all
+            if (!fromDate && !toDate) {
+                res.json({ status: 'success', data: [] });
+                return;
+            }
+
             const history = await restaurantDayClosingService.getHistory(targetHotelIds, fromDate, toDate);
             res.json({ status: 'success', data: history });
-        } catch (e) { next(e); }
+        } catch (e) { 
+            console.error('[DayClosing 500 Error]', {
+                query: req.query,
+                error: e instanceof Error ? e.message : e,
+                stack: e instanceof Error ? e.stack : undefined
+            });
+            next(e); 
+        }
     }
 
     async closeRestaurantDay(req: AuthRequest, res: Response, next: NextFunction) {

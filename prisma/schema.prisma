@@ -9,69 +9,66 @@ datasource db {
 }
 
 model Hotel {
-  id                   String               @id @default(uuid()) @db.Uuid
-  adminId              String?              @db.Uuid
-  name                 String               @db.VarChar(255)
-  brandName            String?              @db.VarChar(255)
-  logoUrl              String?              @db.VarChar(500)
-  address              String?              @db.VarChar(500)
-  city                 String?              @db.VarChar(100)
-  state                String?              @db.VarChar(100)
-  phone                String?              @db.VarChar(20)
-  email                String?              @db.VarChar(255)
-  website              String?              @db.VarChar(255)
-  gstNumber            String?              @db.VarChar(50)
-  checkInTime          String               @default("14:00") @db.VarChar(10)
-  checkOutTime         String               @default("12:00") @db.VarChar(10)
-  taxRate              Decimal              @default(12.00) @db.Decimal(5, 2)
-  currency             String               @default("INR") @db.VarChar(3)
-  isActive             Boolean              @default(true)
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
-  createdBy            String?              @db.Uuid
-  updatedBy            String?              @db.Uuid
-  accentColor          String?              @db.VarChar(20)
-  headerColor          String?              @db.VarChar(20)
-  isCustomTheme        Boolean              @default(false)
-  sidebarColor         String?              @db.VarChar(20)
-  floors               Int?                 @default(1)
-  rating               Int?                 @default(0)
-  totalRooms           Int?                 @default(0)
-  posBossMode          Boolean              @default(false)
-  showAllRooms         Boolean              @default(false)
-  advancePayments      AdvancePayment[]
-  bills                Bill[]
-  bookings             Booking[]
-  companies            Company[]
-  dayClosings          DayClosing[]
-  expenses             Expense[]
-  invoices             Invoice[]
-  liabilities          Liability[]
-  miscCharges          MiscCharge[]
-  paymentVouchers      PaymentVoucher[]
-  pettyCash            PettyCash[]
-  restaurantCategories RestaurantCategory[]
-  restaurantDayClosings RestaurantDayClosing[]
-  restaurantKots       RestaurantKOT[]
-  restaurantMenu       RestaurantMenu[]
-  restaurantOrders     RestaurantOrder[]
-  restaurantTables     RestaurantTable[]
-  roomBlocks           RoomBlock[]
-  roomTypes            RoomType[]
-  rooms                Room[]
-  stewards             HotelSteward[]
-  users                User[]
-  vendors              Vendor[]
-
-  // Invoice Settings
-  invoiceShowCustomLines Boolean  @default(false)
-  invoiceLine1           String?  @default("A UNIT OF") @db.VarChar(255)
-  invoiceLine2           String?  @default("UTTARAKHAND HOTELS4U") @db.VarChar(255)
-  invoiceLine1Size       Int?     @default(14)
-  invoiceLine2Size       Int?     @default(16)
-  invoiceHotelNameColor  String?  @default("#C6A75E") @db.VarChar(20)
-  invoiceHeaderColor     String?  @default("#000000") @db.VarChar(20)
-
+  id                     String                 @id @default(uuid()) @db.Uuid
+  name                   String                 @db.VarChar(255)
+  address                String?                @db.VarChar(500)
+  city                   String?                @db.VarChar(100)
+  state                  String?                @db.VarChar(100)
+  phone                  String?                @db.VarChar(20)
+  email                  String?                @db.VarChar(255)
+  website                String?                @db.VarChar(255)
+  gstNumber              String?                @db.VarChar(50)
+  checkInTime            String                 @default("14:00") @db.VarChar(10)
+  checkOutTime           String                 @default("12:00") @db.VarChar(10)
+  taxRate                Decimal                @default(12.00) @db.Decimal(5, 2)
+  currency               String                 @default("INR") @db.VarChar(3)
+  isActive               Boolean                @default(true)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  createdBy              String?                @db.Uuid
+  updatedBy              String?                @db.Uuid
+  accentColor            String?                @db.VarChar(20)
+  headerColor            String?                @db.VarChar(20)
+  isCustomTheme          Boolean                @default(false)
+  sidebarColor           String?                @db.VarChar(20)
+  floors                 Int?                   @default(1)
+  rating                 Int?                   @default(0)
+  totalRooms             Int?                   @default(0)
+  posBossMode            Boolean                @default(false)
+  showAllRooms           Boolean                @default(false)
+  adminId                String?                @db.Uuid
+  brandName              String?                @db.VarChar(255)
+  logoUrl                String?                @db.VarChar(500)
+  invoiceHeaderColor     String?                @default("#000000") @db.VarChar(20)
+  invoiceHotelNameColor  String?                @default("#C6A75E") @db.VarChar(20)
+  invoiceLine1           String?                @default("A UNIT OF") @db.VarChar(255)
+  invoiceLine2           String?                @default("UTTARAKHAND HOTELS4U") @db.VarChar(255)
+  invoiceShowCustomLines Boolean                @default(false)
+  invoiceLine1Size       Int?                   @default(14)
+  invoiceLine2Size       Int?                   @default(16)
+  advancePayments        AdvancePayment[]
+  bills                  Bill[]
+  bookings               Booking[]
+  companies              Company[]
+  dayClosings            DayClosing[]
+  expenses               Expense[]
+  invoices               Invoice[]
+  liabilities            Liability[]
+  miscCharges            MiscCharge[]
+  paymentVouchers        PaymentVoucher[]
+  pettyCash              PettyCash[]
+  restaurantCategories   RestaurantCategory[]
+  restaurantDayClosings  RestaurantDayClosing[]
+  restaurantKots         RestaurantKOT[]
+  restaurantMenu         RestaurantMenu[]
+  restaurantOrders       RestaurantOrder[]
+  restaurantTables       RestaurantTable[]
+  roomBlocks             RoomBlock[]
+  roomTypes              RoomType[]
+  rooms                  Room[]
+  stewards               HotelSteward[]
+  users                  User[]
+  vendors                Vendor[]
 
   @@index([isActive])
   @@index([adminId])
@@ -192,24 +189,24 @@ model Company {
 }
 
 model User {
-  id           String       @id @default(uuid()) @db.Uuid
-  hotelId      String?      @db.Uuid
-  username     String       @unique @db.VarChar(100)
-  passwordHash String       @db.VarChar(255)
-  fullName     String       @db.VarChar(255)
-  email        String?      @db.VarChar(255)
-  phone        String?      @db.VarChar(20)
-  maxHotels    Int          @default(1)
-  role         UserRole
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  createdBy    String?      @db.Uuid
-  updatedBy    String?      @db.Uuid
-  dayClosings  DayClosing[]
+  id                    String                 @id @default(uuid()) @db.Uuid
+  hotelId               String?                @db.Uuid
+  username              String                 @unique @db.VarChar(100)
+  passwordHash          String                 @db.VarChar(255)
+  fullName              String                 @db.VarChar(255)
+  email                 String?                @db.VarChar(255)
+  phone                 String?                @db.VarChar(20)
+  role                  UserRole
+  isActive              Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  createdBy             String?                @db.Uuid
+  updatedBy             String?                @db.Uuid
+  maxHotels             Int                    @default(1)
+  dayClosings           DayClosing[]
+  licenses              License[]
   restaurantDayClosings RestaurantDayClosing[]
-  licenses     License[]
-  hotel        Hotel?       @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  hotel                 Hotel?                 @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
   @@index([username])
   @@index([hotelId])
@@ -253,8 +250,8 @@ model Room {
   updatedBy        String?           @db.Uuid
   taxRate          Decimal           @default(12.00) @db.Decimal(5, 2)
   bookings         Booking[]
-  restaurantOrders RestaurantOrder[]
   miscCharges      MiscCharge[]
+  restaurantOrders RestaurantOrder[]
   hotel            Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   roomType         RoomType          @relation(fields: [typeId], references: [id])
 
@@ -267,7 +264,6 @@ model Booking {
   id               String            @id @default(uuid()) @db.Uuid
   hotelId          String            @db.Uuid
   roomId           String            @db.Uuid
-  plan             String?           @default("EP")
   guestName        String            @db.VarChar(255)
   guestPhone       String            @db.VarChar(20)
   guestEmail       String?           @db.VarChar(255)
@@ -288,8 +284,6 @@ model Booking {
   createdBy        String?           @db.Uuid
   updatedBy        String?           @db.Uuid
   companyId        String?           @db.Uuid
-  companyName      String?           @db.VarChar(255)
-  companyGst       String?           @db.VarChar(50)
   businessSource   String?           @db.VarChar(100)
   comingFrom       String?           @db.VarChar(255)
   goingTo          String?           @db.VarChar(255)
@@ -299,8 +293,11 @@ model Booking {
   vehicleDetails   String?           @db.VarChar(100)
   checkInTime      String?           @db.VarChar(10)
   checkOutTime     String?           @db.VarChar(10)
-  roomPrice        Decimal?          @db.Decimal(10, 2)
   paymentMode      PaymentMethod     @default(cash)
+  companyGst       String?           @db.VarChar(50)
+  companyName      String?           @db.VarChar(255)
+  plan             String?           @default("EP")
+  roomPrice        Decimal?          @db.Decimal(10, 2)
   advancePayments  AdvancePayment[]
   bill             Bill?
   company          Company?          @relation(fields: [companyId], references: [id])
@@ -347,7 +344,6 @@ model MiscCharge {
   id               String             @id @default(uuid()) @db.Uuid
   hotelId          String             @db.Uuid
   bookingId        String?            @db.Uuid
-  roomId           String?            @db.Uuid
   category         MiscChargeCategory
   description      String             @db.VarChar(500)
   amount           Decimal            @db.Decimal(10, 2)
@@ -359,6 +355,7 @@ model MiscCharge {
   updatedAt        DateTime           @updatedAt
   createdBy        String?            @db.Uuid
   updatedBy        String?            @db.Uuid
+  roomId           String?            @db.Uuid
   booking          Booking?           @relation(fields: [bookingId], references: [id])
   hotel            Hotel              @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   room             Room?              @relation(fields: [roomId], references: [id])
@@ -527,7 +524,6 @@ model RestaurantOrder {
   bookingId     String?                  @db.Uuid
   tableNumber   String?                  @db.VarChar(20)
   guestName     String?                  @db.VarChar(255)
-  stewardName   String?                  @db.VarChar(100)
   subtotal      Decimal                  @db.Decimal(10, 2)
   gst           Decimal                  @db.Decimal(10, 2)
   totalAmount   Decimal                  @db.Decimal(10, 2)
@@ -550,13 +546,14 @@ model RestaurantOrder {
   roomId        String?                  @db.Uuid
   serviceCharge Decimal                  @default(0) @db.Decimal(10, 2)
   stewardId     String?                  @db.Uuid
+  stewardName   String?                  @db.VarChar(100)
   invoice       Invoice?                 @relation("RestaurantOrderInvoice")
   kots          RestaurantKOT[]
   orderItems    RestaurantOrderItem[]
   booking       Booking?                 @relation(fields: [bookingId], references: [id])
   hotel         Hotel                    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   room          Room?                    @relation(fields: [roomId], references: [id])
-  stewards      HotelSteward?                @relation(fields: [stewardId], references: [id])
+  stewards      HotelSteward?            @relation(fields: [stewardId], references: [id])
 
   @@unique([hotelId, orderNumber])
   @@index([hotelId])
@@ -601,21 +598,20 @@ model RestaurantKOT {
 }
 
 model RestaurantTable {
-  id          String   @id @default(uuid()) @db.Uuid
-  hotelId     String   @db.Uuid
-  name        String   @db.VarChar(50)
-  capacity    Int?     @default(2)
-  isActive    Boolean  @default(true)
-  isDeleted   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  hotel       Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid()) @db.Uuid
+  hotelId   String   @db.Uuid
+  name      String   @db.VarChar(50)
+  capacity  Int?     @default(2)
+  isActive  Boolean  @default(true)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  hotel     Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
   @@unique([hotelId, name])
   @@index([hotelId])
   @@map("restaurant_tables")
 }
-
 
 model DayClosing {
   id           String   @id @default(uuid()) @db.Uuid
@@ -639,19 +635,19 @@ model DayClosing {
 
 model RestaurantDayClosing {
   id                  String   @id @default(uuid()) @db.Uuid
-  hotelId             String   @db.Uuid
-  closingDate         DateTime @db.Date
-  totalKots           Int      @default(0)
-  openKots            Int      @default(0)
-  convertedKots       Int      @default(0)
   cancelledKots       Int      @default(0)
-  totalOrdersAmount   Decimal  @default(0) @db.Decimal(12, 2)
-  serviceChargeAmount Decimal  @default(0) @db.Decimal(12, 2)
-  totalRevenue        Decimal  @default(0) @db.Decimal(12, 2)
-  totalInvoices       Int      @default(0)
-  closedBy            String   @db.Uuid
   closedAt            DateTime @default(now())
+  closedBy            String   @db.Uuid
+  closingDate         DateTime @db.Date
+  convertedKots       Int      @default(0)
   createdAt           DateTime @default(now())
+  hotelId             String   @db.Uuid
+  openKots            Int      @default(0)
+  serviceChargeAmount Decimal  @default(0) @db.Decimal(12, 2)
+  totalInvoices       Int      @default(0)
+  totalKots           Int      @default(0)
+  totalOrdersAmount   Decimal  @default(0) @db.Decimal(12, 2)
+  totalRevenue        Decimal  @default(0) @db.Decimal(12, 2)
   user                User     @relation(fields: [closedBy], references: [id])
   hotel               Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
 
@@ -661,7 +657,7 @@ model RestaurantDayClosing {
 }
 
 model HotelSteward {
-  id                String            @id @db.Uuid @default(uuid())
+  id                String            @id @default(uuid()) @db.Uuid
   hotelId           String            @db.Uuid
   name              String            @db.VarChar(100)
   isActive          Boolean           @default(true)
@@ -689,9 +685,9 @@ model License {
   createdBy       String?          @db.Uuid
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-  admin           User             @relation(fields: [adminId], references: [id], onDelete: Cascade)
   devices         LicenseDevice[]
   payments        LicensePayment[]
+  admin           User             @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
   @@index([adminId])
   @@map("licenses")
@@ -717,7 +713,7 @@ model LicensePayment {
   licenseId    String    @db.Uuid
   amount       Decimal   @db.Decimal(12, 2)
   method       String    @db.VarChar(50)
-  notes        String?   @db.Text
+  notes        String?
   extendedFrom DateTime? @db.Date
   extendedTo   DateTime? @db.Date
   createdAt    DateTime  @default(now())
@@ -727,10 +723,10 @@ model LicensePayment {
 }
 
 enum UserRole {
-  super_admin
   admin
   hotel_manager
   hotel_user
+  super_admin
   restaurant_staff
   restaurant_admin
 }
