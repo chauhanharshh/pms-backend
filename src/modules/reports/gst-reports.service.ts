@@ -204,6 +204,9 @@ export class GstReportsService {
 
     async getInvoiceWiseReport(hotelId: string, startDate?: string, endDate?: string, status?: string, companyId?: string) {
         const filters = this.getBaseFilters(hotelId, startDate, endDate, status);
+        filters.push(Prisma.sql`i."type"::text = 'ROOM'`);
+        filters.push(Prisma.sql`i."restaurantOrderId" IS NULL`);
+        
         if (companyId) {
             filters.push(Prisma.sql`bk."companyId" = ${companyId}::uuid`);
         }
