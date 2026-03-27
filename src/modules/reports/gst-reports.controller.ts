@@ -80,12 +80,13 @@ export class GstReportsController {
 
     async getSacHsnReport(req: AuthRequest, res: Response) {
         const targetHotelId = this.resolveHotelId(req);
-        const { startDate, endDate, status } = req.query;
+        const { startDate, endDate, status, restaurantEnabled } = req.query;
         const result = await gstReportsService.getSacHsnReport(
             targetHotelId,
             startDate as string,
             endDate as string,
-            status as string
+            status as string,
+            restaurantEnabled === 'true'
         );
         res.status(200).json({ status: 'success', data: result });
     }

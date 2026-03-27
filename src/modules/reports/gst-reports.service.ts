@@ -242,7 +242,7 @@ export class GstReportsService {
         return prisma.$queryRaw(query);
     }
 
-    async getSacHsnReport(hotelId: string, startDate?: string, endDate?: string, status?: string) {
+    async getSacHsnReport(hotelId: string, startDate?: string, endDate?: string, status?: string, restaurantEnabled: boolean = true) {
         // Here we build an aggregated union of Room, Restaurant, Misc SACs
         const filters = this.getBaseFilters(hotelId, startDate, endDate, status);
         const whereClause = this.buildWhereClause(filters);
@@ -275,6 +275,7 @@ export class GstReportsService {
                     ("roomCharges" / NULLIF("subtotal", 0)) * "sgst" as "sgst",
                     ("roomCharges" / NULLIF("subtotal", 0)) * "igst" as "igst"
                 FROM invoice_data WHERE "roomCharges" > 0
+                ${restaurantEnabled ? Prisma.sql`
                 UNION ALL
                 -- Restaurant SAC
                 SELECT 
@@ -285,7 +286,7 @@ export class GstReportsService {
                     0 as "cgst",
                     0 as "sgst",
                     0 as "igst"
-                FROM invoice_data WHERE "restaurantCharges" > 0
+                FROM invoice_data WHERE "restaurantCharges" > 0` : Prisma.empty}
                 UNION ALL
                 -- Misc SAC
                 SELECT 
