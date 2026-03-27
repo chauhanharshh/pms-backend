@@ -751,20 +751,23 @@ export class RestaurantService {
                         .plus(new Decimal(bill.miscCharges || 0));
 
                     const discountAmount = new Decimal(bill.discount || 0);
-                    const previousSubtotal = new Decimal(
-                        bill.subtotal ||
-                        new Decimal(bill.roomCharges || 0)
-                            .plus(new Decimal(bill.restaurantCharges || 0))
-                            .plus(new Decimal(bill.miscCharges || 0))
-                    );
-                    const previousTaxable = previousSubtotal.minus(discountAmount);
-                    const effectiveTaxRate = previousTaxable.gt(0)
-                        ? new Decimal(bill.taxAmount || 0).div(previousTaxable)
-                        : new Decimal(0);
+                    const booking = await tx.booking.findUnique({ where: { id: (order as any).bookingId } });
+                    if (!booking) return invoice; // Should not happen but safety first
 
-                    const newTaxable = subtotal.minus(discountAmount);
-                    const taxAmount = newTaxable.mul(effectiveTaxRate);
-                    const totalAmount = newTaxable.plus(taxAmount);
+                    const roomCharges = new Decimal(bill.roomCharges?.toString() || '0');
+                    const checkInDateTime = new Date(booking.checkInDate);
+                    const [ciH, ciM] = (booking.checkInTime || "14:00").split(':').map(Number);
+                    checkInDateTime.setHours(ciH, ciM || 0, 0, 0);
+
+                    const checkOutDateTime = new Date(booking.checkOutDate);
+                    const [coH, coM] = (booking.checkOutTime || "12:00").split(':').map(Number);
+                    checkOutDateTime.setHours(coH, coM || 0, 0, 0);
+
+                    const nights = calculateRoomDays(checkInDateTime, checkOutDateTime);
+                    const dailyRent = roomCharges.div(nights);
+                    const taxInfo = calculateRoomTax(dailyRent, nights);
+                    const taxAmount = taxInfo.amount;
+                    const totalAmount = subtotal.sub(discountAmount).add(taxAmount);
 
                     await (tx.bill as any).update({
                         where: { id: (bill as any).id },
@@ -773,7 +776,7 @@ export class RestaurantService {
                             subtotal,
                             taxAmount,
                             totalAmount,
-                            balanceDue: totalAmount.minus(new Decimal(bill.paidAmount || 0)),
+                            balanceDue: totalAmount.sub(new Decimal(bill.paidAmount || 0)),
                             updatedBy: userId
                         }
                     });

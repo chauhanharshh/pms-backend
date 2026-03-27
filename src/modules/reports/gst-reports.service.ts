@@ -89,12 +89,12 @@ export class GstReportsService {
                 0 as "roomRentDisc",
                 COALESCE(b."roomCharges", 0) as "roomRent",
                 
-                COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."cgst", 2), 0) as "cgst",
-                COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."sgst", 2), 0) as "sgst",
-                COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."igst", 2), 0) as "igst",
+                COALESCE(i."cgst", 0) as "cgst",
+                COALESCE(i."sgst", 0) as "sgst",
+                COALESCE(i."igst", 0) as "igst",
                 
                 COALESCE(b."miscCharges", 0) as "otherCharges",
-                ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2) as "otherChargesGst",
+                0 as "otherChargesGst",
                 
                 COALESCE(bk."advanceAmount", 0) as "advance",
                 
@@ -148,21 +148,11 @@ export class GstReportsService {
                 COALESCE(bk_bill."guestName", ro."guestName") as "guestName",
                 '996331' as "sacCode",
                 COALESCE(b."restaurantCharges", i."subtotal") as "taxableAmount",
-                ROUND(( (i."cgst" + i."sgst" + i."igst") / NULLIF(i."subtotal", 0) ) * 100, 2) as "gstRate",
+                0 as "cgst",
+                0 as "sgst",
+                0 as "igst",
                 CASE 
-                    WHEN b.id IS NOT NULL THEN ROUND((b."restaurantCharges" / NULLIF(i."subtotal", 0)) * i."cgst", 2)
-                    ELSE i."cgst"
-                END as "cgst",
-                CASE 
-                    WHEN b.id IS NOT NULL THEN ROUND((b."restaurantCharges" / NULLIF(i."subtotal", 0)) * i."sgst", 2)
-                    ELSE i."sgst"
-                END as "sgst",
-                CASE 
-                    WHEN b.id IS NOT NULL THEN ROUND((b."restaurantCharges" / NULLIF(i."subtotal", 0)) * i."igst", 2)
-                    ELSE i."igst"
-                END as "igst",
-                CASE 
-                    WHEN b.id IS NOT NULL THEN ROUND(b."restaurantCharges" + ((b."restaurantCharges" / NULLIF(i."subtotal", 0)) * (i."cgst" + i."sgst" + i."igst")), 2)
+                    WHEN b.id IS NOT NULL THEN ROUND(b."restaurantCharges", 2)
                     ELSE i."totalAmount"
                 END as "total"
             FROM invoices i
@@ -196,11 +186,11 @@ export class GstReportsService {
                 'Miscellaneous Charges' as "chargeDescription",
                 '000000' as "sacCode",
                 b."miscCharges" as "taxableAmount",
-                ROUND(( (i."cgst" + i."sgst" + i."igst") / NULLIF(i."subtotal", 0) ) * 100, 2) as "gstRate",
-                ROUND((b."miscCharges" / NULLIF(i."subtotal", 0)) * i."cgst", 2) as "cgst",
-                ROUND((b."miscCharges" / NULLIF(i."subtotal", 0)) * i."sgst", 2) as "sgst",
-                ROUND((b."miscCharges" / NULLIF(i."subtotal", 0)) * i."igst", 2) as "igst",
-                ROUND(b."miscCharges" + ((b."miscCharges" / NULLIF(i."subtotal", 0)) * (i."cgst" + i."sgst" + i."igst")), 2) as "total"
+                0 as "gstRate",
+                0 as "cgst",
+                0 as "sgst",
+                0 as "igst",
+                ROUND(b."miscCharges", 2) as "total"
             FROM invoices i
             JOIN bills b ON i."billId" = b.id
             JOIN bookings bk ON b."bookingId" = bk.id
@@ -227,7 +217,7 @@ export class GstReportsService {
                 c."gstNumber" as "gstin",
                 h."state" as "placeOfSupply",
                 i."subtotal" as "taxableValue",
-                ROUND(( (i."cgst" + i."sgst" + i."igst") / NULLIF(i."subtotal", 0) ) * 100, 2) as "gstRate",
+                ROUND(( (i."cgst" + i."sgst" + i."igst") / NULLIF(COALESCE(b."roomCharges", i."subtotal"), 0) ) * 100, 2) as "gstRate",
                 i."cgst",
                 i."sgst",
                 i."igst",
@@ -288,9 +278,9 @@ export class GstReportsService {
                     'Restaurant Services' as "description",
                     "restaurantCharges" as "taxableValue",
                     "gstRate",
-                    ("restaurantCharges" / NULLIF("subtotal", 0)) * "cgst",
-                    ("restaurantCharges" / NULLIF("subtotal", 0)) * "sgst",
-                    ("restaurantCharges" / NULLIF("subtotal", 0)) * "igst"
+                    0 as "cgst",
+                    0 as "sgst",
+                    0 as "igst"
                 FROM invoice_data WHERE "restaurantCharges" > 0
                 UNION ALL
                 -- Misc SAC
@@ -299,9 +289,9 @@ export class GstReportsService {
                     'Miscellaneous Services' as "description",
                     "miscCharges" as "taxableValue",
                     "gstRate",
-                    ("miscCharges" / NULLIF("subtotal", 0)) * "cgst",
-                    ("miscCharges" / NULLIF("subtotal", 0)) * "sgst",
-                    ("miscCharges" / NULLIF("subtotal", 0)) * "igst"
+                    0,
+                    0,
+                    0
                 FROM invoice_data WHERE "miscCharges" > 0
             )
             SELECT 
