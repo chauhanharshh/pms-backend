@@ -36,9 +36,9 @@ export class GstReportsService {
 
         const query = Prisma.sql`
             SELECT 
-                COALESCE(SUM(b."roomCharges"), 0) as "totalRoomTaxable",
-                COALESCE(SUM(COALESCE(b."restaurantCharges", 0) + COALESCE(ro."subtotal", 0)), 0) as "totalRestaurantTaxable",
-                COALESCE(SUM(b."miscCharges"), 0) as "totalMiscTaxable",
+                COALESCE(SUM(COALESCE(i."roomRent", b."roomCharges")), 0) as "totalRoomTaxable",
+                COALESCE(SUM(COALESCE(i."otherCharges", b."restaurantCharges", 0) + COALESCE(ro."subtotal", 0)), 0) as "totalRestaurantTaxable",
+                COALESCE(SUM(COALESCE(i."miscCharges", b."miscCharges")), 0) as "totalMiscTaxable",
                 COALESCE(SUM(i."cgst"), 0) as "totalCgst",
                 COALESCE(SUM(i."sgst"), 0) as "totalSgst",
                 COALESCE(SUM(i."igst"), 0) as "totalIgst",
@@ -81,26 +81,26 @@ export class GstReportsService {
                 i."invoiceNumber" as "invoiceNo",
                 i."invoiceDate" as "date",
                 i."paymentMethod" as "paymentMethod",
-                bk."guestName" as "guestName",
-                c."name" as "companyName",
+                COALESCE(i."guestName", bk."guestName") as "guestName",
+                COALESCE(i."company", c."name") as "companyName",
                 c."gstNumber" as "gstin",
-                rm."roomNumber" as "roomNumber",
+                COALESCE(i."roomNumber", rm."roomNumber") as "roomNumber",
                 '996311' as "sacCode",
                 
-                COALESCE(b."discount", 0) as "invDiscount",
+                COALESCE(i."discount", b."discount", 0) as "invDiscount",
                 0 as "roomRentDisc",
-                COALESCE(b."roomCharges", 0) as "roomRent",
+                COALESCE(i."roomRent", b."roomCharges", 0) as "roomRent",
                 
                 COALESCE(i."cgst", 0) as "cgst",
                 COALESCE(i."sgst", 0) as "sgst",
                 COALESCE(i."igst", 0) as "igst",
                 
-                COALESCE(b."miscCharges", 0) as "otherCharges",
+                COALESCE(i."miscCharges", b."miscCharges", 0) as "otherCharges",
                 0 as "otherChargesGst",
                 
-                COALESCE(bk."advanceAmount", 0) as "advance",
+                COALESCE(i."advancePaid", bk."advanceAmount", 0) as "advance",
                 
-                (
+                COALESCE(i."netPayable", (
                     COALESCE(b."roomCharges", 0) + 
                     COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."cgst", 2), 0) + 
                     COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * i."sgst", 2), 0) + 
@@ -109,22 +109,22 @@ export class GstReportsService {
                     COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0)
                     - COALESCE(b."discount", 0)
                     - COALESCE(bk."advanceAmount", 0)
-                ) as "netPayable",
+                )) as "netPayable",
                 
                 CASE WHEN LOWER(i."paymentMethod") = 'cash' THEN 
-                    (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0))
+                    COALESCE(i."netPayable", (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0)))
                 ELSE 0 END as "cash",
                 
                 CASE WHEN LOWER(i."paymentMethod") IN ('card', 'upi', 'bank') THEN 
-                    (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0))
+                    COALESCE(i."netPayable", (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0)))
                 ELSE 0 END as "bank",
                 
                 CASE WHEN LOWER(COALESCE(i."paymentMethod", 'credit')) NOT IN ('cash', 'card', 'upi', 'bank') THEN 
-                    (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0))
+                    COALESCE(i."netPayable", (COALESCE(b."roomCharges", 0) + COALESCE(b."miscCharges", 0) + COALESCE(ROUND((COALESCE(b."miscCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) + COALESCE(ROUND((COALESCE(b."roomCharges", 0) / NULLIF(i."subtotal", 0)) * COALESCE(i."cgst" + i."sgst" + i."igst", 0), 2), 0) - COALESCE(b."discount", 0) - COALESCE(bk."advanceAmount", 0)))
                 ELSE 0 END as "coCr"
             FROM invoices i
-            JOIN bills b ON i."billId" = b.id
-            JOIN bookings bk ON b."bookingId" = bk.id
+            LEFT JOIN bills b ON i."billId" = b.id
+            LEFT JOIN bookings bk ON b."bookingId" = bk.id
             LEFT JOIN rooms rm ON bk."roomId" = rm.id
             LEFT JOIN companies c ON bk."companyId" = c.id
             ${whereClause}
@@ -146,17 +146,14 @@ export class GstReportsService {
             SELECT 
                 i."invoiceNumber" as "invoiceNo",
                 i."invoiceDate" as "date",
-                COALESCE(r_bill."roomNumber", r_order."roomNumber") as "roomNo",
-                COALESCE(bk_bill."guestName", ro."guestName") as "guestName",
+                COALESCE(i."roomNumber", r_bill."roomNumber", r_order."roomNumber") as "roomNo",
+                COALESCE(i."guestName", bk_bill."guestName", ro."guestName") as "guestName",
                 '996331' as "sacCode",
-                COALESCE(b."restaurantCharges", i."subtotal") as "taxableAmount",
+                COALESCE(i."otherCharges", b."restaurantCharges", i."subtotal") as "taxableAmount",
                 0 as "cgst",
                 0 as "sgst",
                 0 as "igst",
-                CASE 
-                    WHEN b.id IS NOT NULL THEN ROUND(b."restaurantCharges", 2)
-                    ELSE i."totalAmount"
-                END as "total"
+                i."totalAmount" as "total"
             FROM invoices i
             LEFT JOIN bills b ON i."billId" = b.id
             LEFT JOIN bookings bk_bill ON b."bookingId" = bk_bill.id
@@ -165,7 +162,7 @@ export class GstReportsService {
             LEFT JOIN rooms r_order ON ro."roomId" = r_order.id
             LEFT JOIN bookings bk_order ON ro."bookingId" = bk_order.id
             ${whereClause}
-            AND (b."restaurantCharges" > 0 OR i."restaurantOrderId" IS NOT NULL)
+            AND (b."restaurantCharges" > 0 OR i."restaurantOrderId" IS NOT NULL OR i."otherCharges" > 0)
             ${companyId ? Prisma.sql`AND (bk_bill."companyId" = ${companyId}::uuid OR bk_order."companyId" = ${companyId}::uuid)` : Prisma.empty}
             ORDER BY i."invoiceDate" DESC
         `;
@@ -185,18 +182,19 @@ export class GstReportsService {
             SELECT 
                 i."invoiceNumber" as "invoiceNo",
                 i."invoiceDate" as "date",
-                'Miscellaneous Charges' as "chargeDescription",
+                COALESCE(i."remarks", 'Miscellaneous Charges') as "chargeDescription",
                 '000000' as "sacCode",
-                b."miscCharges" as "taxableAmount",
+                COALESCE(i."miscCharges", b."miscCharges") as "taxableAmount",
                 0 as "gstRate",
                 0 as "cgst",
                 0 as "sgst",
                 0 as "igst",
-                ROUND(b."miscCharges", 2) as "total"
+                ROUND(COALESCE(i."miscCharges", b."miscCharges"), 2) as "total"
             FROM invoices i
-            JOIN bills b ON i."billId" = b.id
-            JOIN bookings bk ON b."bookingId" = bk.id
+            LEFT JOIN bills b ON i."billId" = b.id
+            LEFT JOIN bookings bk ON b."bookingId" = bk.id
             ${whereClause}
+            AND (b."miscCharges" > 0 OR i."miscCharges" > 0)
             ORDER BY i."invoiceDate" DESC
         `;
 
@@ -217,12 +215,12 @@ export class GstReportsService {
             SELECT 
                 i."invoiceNumber",
                 i."invoiceDate",
-                COALESCE(bk."guestName", ro."guestName") as "guestName",
-                c."name" as "companyName",
+                COALESCE(i."guestName", bk."guestName", ro."guestName") as "guestName",
+                COALESCE(i."company", c."name") as "companyName",
                 c."gstNumber" as "gstin",
                 h."state" as "placeOfSupply",
-                i."subtotal" as "taxableValue",
-                ROUND(( (i."cgst" + i."sgst" + i."igst") / NULLIF(COALESCE(b."roomCharges", i."subtotal"), 0) ) * 100, 2) as "gstRate",
+                COALESCE(i."roomRent", b."roomCharges", i."subtotal") as "taxableValue",
+                ROUND(( (i."cgst" + i."sgst" + i."igst") / NULLIF(COALESCE(i."roomRent", b."roomCharges", i."subtotal"), 0) ) * 100, 2) as "gstRate",
                 i."cgst",
                 i."sgst",
                 i."igst",
@@ -256,9 +254,9 @@ export class GstReportsService {
                     i."cgst",
                     i."sgst",
                     i."igst",
-                    COALESCE(b."roomCharges", 0) as "roomCharges",
-                    COALESCE(b."restaurantCharges", 0) + COALESCE(ro."subtotal", 0) as "restaurantCharges",
-                    COALESCE(b."miscCharges", 0) as "miscCharges",
+                    COALESCE(i."roomRent", b."roomCharges", 0) as "roomRent",
+                    COALESCE(i."otherCharges", b."restaurantCharges", 0) + COALESCE(ro."subtotal", 0) as "restaurantCharges",
+                    COALESCE(i."miscCharges", b."miscCharges", 0) as "miscCharges",
                     ROUND(( (i."cgst" + i."sgst" + i."igst") / NULLIF(i."subtotal", 0) ) * 100, 2) as "gstRate"
                 FROM invoices i
                 LEFT JOIN bills b ON i."billId" = b.id
@@ -270,12 +268,12 @@ export class GstReportsService {
                 SELECT 
                     '996311' as "sacCode",
                     'Room Accommodation' as "description",
-                    "roomCharges" as "taxableValue",
+                    "roomRent" as "taxableValue",
                     "gstRate",
-                    ("roomCharges" / NULLIF("subtotal", 0)) * "cgst" as "cgst",
-                    ("roomCharges" / NULLIF("subtotal", 0)) * "sgst" as "sgst",
-                    ("roomCharges" / NULLIF("subtotal", 0)) * "igst" as "igst"
-                FROM invoice_data WHERE "roomCharges" > 0
+                    ("roomRent" / NULLIF("subtotal", 0)) * "cgst" as "cgst",
+                    ("roomRent" / NULLIF("subtotal", 0)) * "sgst" as "sgst",
+                    ("roomRent" / NULLIF("subtotal", 0)) * "igst" as "igst"
+                FROM invoice_data WHERE "roomRent" > 0
                 ${restaurantEnabled ? Prisma.sql`
                 UNION ALL
                 -- Restaurant SAC

@@ -9,69 +9,69 @@ datasource db {
 }
 
 model Hotel {
-  id                     String                 @id @default(uuid()) @db.Uuid
-  name                   String                 @db.VarChar(255)
-  address                String?                @db.VarChar(500)
-  city                   String?                @db.VarChar(100)
-  state                  String?                @db.VarChar(100)
-  phone                  String?                @db.VarChar(20)
-  email                  String?                @db.VarChar(255)
-  website                String?                @db.VarChar(255)
-  gstNumber              String?                @db.VarChar(50)
-  checkInTime            String                 @default("14:00") @db.VarChar(10)
-  checkOutTime           String                 @default("12:00") @db.VarChar(10)
-  taxRate                Decimal                @default(12.00) @db.Decimal(5, 2)
-  currency               String                 @default("INR") @db.VarChar(3)
-  isActive               Boolean                @default(true)
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
-  createdBy              String?                @db.Uuid
-  updatedBy              String?                @db.Uuid
-  accentColor            String?                @db.VarChar(20)
-  headerColor            String?                @db.VarChar(20)
-  isCustomTheme          Boolean                @default(false)
-  sidebarColor           String?                @db.VarChar(20)
-  floors                 Int?                   @default(1)
-  rating                 Int?                   @default(0)
-  totalRooms             Int?                   @default(0)
-  posBossMode            Boolean                @default(false)
-  showAllRooms           Boolean                @default(false)
-  adminId                String?                @db.Uuid
-  brandName              String?                @db.VarChar(255)
-  logoUrl                String?                @db.VarChar(500)
-  invoiceHeaderColor     String?                @default("#000000") @db.VarChar(20)
-  invoiceHotelNameColor  String?                @default("#C6A75E") @db.VarChar(20)
-  invoiceLine1           String?                @default("A UNIT OF") @db.VarChar(255)
-  invoiceLine2           String?                @default("UTTARAKHAND HOTELS4U") @db.VarChar(255)
-  invoiceShowCustomLines Boolean                @default(false)
-  invoiceLine1Size       Int?                   @default(14)
-  invoiceLine2Size       Int?                   @default(16)
-  showInvoiceWatermark   Boolean                @default(true)
-  restaurantRoomCardColor String?                @default("#0781b6") @db.VarChar(20)
-  restaurantRoomCardTextColor String?            @default("#ffffff") @db.VarChar(20)
-  advancePayments        AdvancePayment[]
-  bills                  Bill[]
-  bookings               Booking[]
-  companies              Company[]
-  dayClosings            DayClosing[]
-  expenses               Expense[]
-  invoices               Invoice[]
-  liabilities            Liability[]
-  miscCharges            MiscCharge[]
-  paymentVouchers        PaymentVoucher[]
-  pettyCash              PettyCash[]
-  restaurantCategories   RestaurantCategory[]
-  restaurantDayClosings  RestaurantDayClosing[]
-  restaurantKots         RestaurantKOT[]
-  restaurantMenu         RestaurantMenu[]
-  restaurantOrders       RestaurantOrder[]
-  restaurantTables       RestaurantTable[]
-  roomBlocks             RoomBlock[]
-  roomTypes              RoomType[]
-  rooms                  Room[]
-  stewards               HotelSteward[]
-  users                  User[]
-  vendors                Vendor[]
+  id                          String                 @id @default(uuid()) @db.Uuid
+  name                        String                 @db.VarChar(255)
+  address                     String?                @db.VarChar(500)
+  city                        String?                @db.VarChar(100)
+  state                       String?                @db.VarChar(100)
+  phone                       String?                @db.VarChar(20)
+  email                       String?                @db.VarChar(255)
+  website                     String?                @db.VarChar(255)
+  gstNumber                   String?                @db.VarChar(50)
+  checkInTime                 String                 @default("14:00") @db.VarChar(10)
+  checkOutTime                String                 @default("12:00") @db.VarChar(10)
+  taxRate                     Decimal                @default(12.00) @db.Decimal(5, 2)
+  currency                    String                 @default("INR") @db.VarChar(3)
+  isActive                    Boolean                @default(true)
+  createdAt                   DateTime               @default(now())
+  updatedAt                   DateTime               @updatedAt
+  createdBy                   String?                @db.Uuid
+  updatedBy                   String?                @db.Uuid
+  accentColor                 String?                @db.VarChar(20)
+  headerColor                 String?                @db.VarChar(20)
+  isCustomTheme               Boolean                @default(false)
+  sidebarColor                String?                @db.VarChar(20)
+  floors                      Int?                   @default(1)
+  rating                      Int?                   @default(0)
+  totalRooms                  Int?                   @default(0)
+  posBossMode                 Boolean                @default(false)
+  showAllRooms                Boolean                @default(false)
+  adminId                     String?                @db.Uuid
+  brandName                   String?                @db.VarChar(255)
+  logoUrl                     String?                @db.VarChar(500)
+  invoiceHeaderColor          String?                @default("#000000") @db.VarChar(20)
+  invoiceHotelNameColor       String?                @default("#C6A75E") @db.VarChar(20)
+  invoiceLine1                String?                @default("A UNIT OF") @db.VarChar(255)
+  invoiceLine1Size            Int?                   @default(14)
+  invoiceLine2                String?                @default("UTTARAKHAND HOTELS4U") @db.VarChar(255)
+  invoiceLine2Size            Int?                   @default(16)
+  invoiceShowCustomLines      Boolean                @default(false)
+  showInvoiceWatermark        Boolean                @default(true)
+  restaurantRoomCardColor     String?                @default("#0781b6") @db.VarChar(20)
+  restaurantRoomCardTextColor String?                @default("#ffffff") @db.VarChar(20)
+  advancePayments             AdvancePayment[]
+  bills                       Bill[]
+  bookings                    Booking[]
+  companies                   Company[]
+  dayClosings                 DayClosing[]
+  expenses                    Expense[]
+  invoices                    Invoice[]
+  liabilities                 Liability[]
+  miscCharges                 MiscCharge[]
+  paymentVouchers             PaymentVoucher[]
+  pettyCash                   PettyCash[]
+  restaurantCategories        RestaurantCategory[]
+  restaurantDayClosings       RestaurantDayClosing[]
+  restaurantKots              RestaurantKOT[]
+  restaurantMenu              RestaurantMenu[]
+  restaurantOrders            RestaurantOrder[]
+  restaurantTables            RestaurantTable[]
+  roomBlocks                  RoomBlock[]
+  roomTypes                   RoomType[]
+  rooms                       Room[]
+  stewards                    HotelSteward[]
+  users                       User[]
+  vendors                     Vendor[]
 
   @@index([isActive])
   @@index([adminId])
@@ -267,7 +267,6 @@ model Booking {
   id               String            @id @default(uuid()) @db.Uuid
   hotelId          String            @db.Uuid
   roomId           String?           @db.Uuid
-  roomNumber       String?           @db.VarChar(50)
   guestName        String            @db.VarChar(255)
   guestPhone       String            @db.VarChar(20)
   guestEmail       String?           @db.VarChar(255)
@@ -302,6 +301,7 @@ model Booking {
   companyName      String?           @db.VarChar(255)
   plan             String?           @default("EP")
   roomPrice        Decimal?          @db.Decimal(10, 2)
+  roomNumber       String?           @db.VarChar(50)
   advancePayments  AdvancePayment[]
   bill             Bill?
   company          Company?          @relation(fields: [companyId], references: [id])
@@ -422,9 +422,44 @@ model Invoice {
   serviceCharge     Decimal          @default(0) @db.Decimal(10, 2)
   source            String?          @db.VarChar(50)
   type              InvoiceType      @default(ROOM)
+  discount          Decimal          @default(0) @db.Decimal(10, 2)
+  discountType      String?          @default("flat") @db.VarChar(20)
+  discountValue     Decimal          @default(0) @db.Decimal(10, 2)
+  netPayable        Decimal          @default(0) @db.Decimal(10, 2)
   bill              Bill?            @relation(fields: [billId], references: [id])
   hotel             Hotel            @relation(fields: [hotelId], references: [id], onDelete: Cascade)
   restaurantOrder   RestaurantOrder? @relation("RestaurantOrderInvoice", fields: [restaurantOrderId], references: [id])
+  
+  // Added: Modify Invoice - edits all fields except invoice number
+  // Guest Overrides
+  guestName         String?          @db.VarChar(255)
+  phone             String?          @db.VarChar(50)
+  email             String?          @db.VarChar(100)
+  address           String?          @db.Text
+  company           String?          @db.VarChar(255)
+  idProofType       String?          @db.VarChar(50)
+  idProofNumber     String?          @db.VarChar(100)
+
+  // Stay Overrides
+  checkInDate       DateTime?
+  checkInTime       String?          @db.VarChar(20)
+  checkOutDate      DateTime?
+  checkOutTime      String?          @db.VarChar(20)
+  roomNumber        String?          @db.VarChar(50)
+  plan              String?          @db.VarChar(20)
+  adults            Int?
+  children          Int?
+
+  // Billing Overrides
+  roomRent          Decimal?         @db.Decimal(10, 2)
+  otherCharges      Decimal?         @default(0) @db.Decimal(10, 2)
+  miscCharges       Decimal?         @default(0) @db.Decimal(10, 2)
+  advancePaid       Decimal?         @default(0) @db.Decimal(10, 2)
+  remarks           String?          @db.Text
+
+  // Tracking
+  isModified        Boolean          @default(false)
+  modifiedAt        DateTime?
 
   @@unique([hotelId, invoiceNumber])
   @@index([hotelId])

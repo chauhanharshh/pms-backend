@@ -99,7 +99,7 @@ export class InvoicesService {
         });
     }
 
-    async generateInvoice(data: { billId: string; guestAddress?: string }, hotelId: string, userId: string) {
+    async generateInvoice(data: { billId: string; guestAddress?: string, discount?: number, discountType?: string, discountValue?: number }, hotelId: string, userId: string) {
         console.log(`Generating invoice for billId: ${data.billId}, hotelId: ${hotelId}`);
         const bill = await prisma.bill.findFirst({
             where: { id: data.billId, hotelId },
@@ -227,6 +227,10 @@ export class InvoicesService {
 
             const discountAmount = new Decimal(bill.discount?.toString() || '0');
             const totalAmount = subtotal.sub(discountAmount).add(totalTax);
+            
+            // Apply additional invoice-level discount
+            const newDiscount = new Decimal(data.discount?.toString() || '0');
+            const netPayable = totalAmount.sub(newDiscount);
 
             // Update Bill with correct calculated amounts
             await tx.bill.update({
@@ -264,7 +268,11 @@ export class InvoicesService {
                 cgst: cgstAmount,
                 sgst: sgstAmount,
                 totalAmount,
-                status: (totalAmount.sub(bill.paidAmount)).lte(0) ? InvoiceStatus.paid : InvoiceStatus.issued,
+                discount: newDiscount,
+                discountType: data.discountType || 'flat',
+                discountValue: new Decimal(data.discountValue?.toString() || '0'),
+                netPayable: netPayable,
+                status: (netPayable.sub(bill.paidAmount)).lte(0) ? InvoiceStatus.paid : InvoiceStatus.issued,
                 createdBy: userId,
                 updatedBy: userId
             };
@@ -366,6 +374,56 @@ export class InvoicesService {
             });
 
             return updatedInvoice;
+        });
+    }
+
+    async updateInvoice(invoiceId: string, hotelId: string, data: any, userId: string) {
+        // Find existing invoice
+        const existing = await prisma.invoice.findFirst({
+            where: { id: invoiceId, hotelId }
+        });
+        if (!existing) throw new NotFoundError('Invoice not found');
+
+        // CRITICAL: never update invoiceNo
+        delete data.invoiceNo;
+        delete data.invoiceNumber;
+        delete data.billNo;
+        delete data.id;
+        delete data.hotelId;
+
+        // Ensure proper types
+        if (data.checkInDate) data.checkInDate = new Date(data.checkInDate);
+        if (data.checkOutDate) data.checkOutDate = new Date(data.checkOutDate);
+        
+        // Handle Decimal conversion for all billing fields
+        const decimalFields = ['subtotal', 'cgst', 'sgst', 'igst', 'totalAmount', 'discount', 'discountValue', 'netPayable', 'roomRent', 'otherCharges', 'miscCharges', 'advancePaid', 'serviceCharge'];
+        decimalFields.forEach(field => {
+            if (data[field] !== undefined) {
+                data[field] = new Decimal(data[field].toString());
+            }
+        });
+
+        return prisma.invoice.update({
+            where: { id: invoiceId },
+            data: {
+                ...data,
+                isModified: true,
+                modifiedAt: new Date(),
+                updatedBy: userId,
+                updatedAt: new Date()
+            },
+            include: {
+                bill: {
+                    include: {
+                        booking: {
+                            include: {
+                                room: { include: { roomType: true } },
+                                miscCharges: { where: { isDeleted: false } }
+                            }
+                        }
+                    }
+                }
+            }
         });
     }
 }

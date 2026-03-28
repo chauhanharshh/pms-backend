@@ -41,4 +41,11 @@ export class InvoicesController {
             res.json({ status: 'success', data: invoice });
         } catch (e) { next(e); }
     }
+
+    async updateInvoice(req: AuthRequest, res: Response, next: NextFunction) {
+        try {
+            const invoice = await invoicesService.updateInvoice(req.params.id, req.hotelId as string, req.body, req.user!.userId);
+            res.json({ status: 'success', data: invoice });
+        } catch (e) { next(e); }
+    }
 }
