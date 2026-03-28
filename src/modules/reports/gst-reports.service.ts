@@ -80,6 +80,7 @@ export class GstReportsService {
             SELECT 
                 i."invoiceNumber" as "invoiceNo",
                 i."invoiceDate" as "date",
+                i."paymentMethod" as "paymentMethod",
                 bk."guestName" as "guestName",
                 c."name" as "companyName",
                 c."gstNumber" as "gstin",

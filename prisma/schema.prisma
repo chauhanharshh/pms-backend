@@ -266,7 +266,8 @@ model Room {
 model Booking {
   id               String            @id @default(uuid()) @db.Uuid
   hotelId          String            @db.Uuid
-  roomId           String            @db.Uuid
+  roomId           String?           @db.Uuid
+  roomNumber       String?           @db.VarChar(50)
   guestName        String            @db.VarChar(255)
   guestPhone       String            @db.VarChar(20)
   guestEmail       String?           @db.VarChar(255)
@@ -305,7 +306,7 @@ model Booking {
   bill             Bill?
   company          Company?          @relation(fields: [companyId], references: [id])
   hotel            Hotel             @relation(fields: [hotelId], references: [id], onDelete: Cascade)
-  room             Room              @relation(fields: [roomId], references: [id])
+  room             Room?             @relation(fields: [roomId], references: [id])
   miscCharges      MiscCharge[]
   restaurantOrders RestaurantOrder[]
 

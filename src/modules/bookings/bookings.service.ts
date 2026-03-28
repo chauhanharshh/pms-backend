@@ -118,18 +118,21 @@ export class BookingsService {
   }
 
   async createReservation(data: any, hotelId: string, userId: string) {
-    const isAvailable = await roomsService.checkRoomAvailability(
-      hotelId,
-      data.roomId,
-      new Date(data.checkInDate),
-      new Date(data.checkOutDate)
-    );
-    if (!isAvailable) {
-      throw new BadRequestError("Room is not available for selected dates");
+    if (data.roomId) {
+      const isAvailable = await roomsService.checkRoomAvailability(
+        hotelId,
+        data.roomId,
+        new Date(data.checkInDate),
+        new Date(data.checkOutDate)
+      );
+      if (!isAvailable) {
+        throw new BadRequestError("Room is not available for selected dates");
+      }
     }
 
     const {
       roomId,
+      roomNumber,
       plan,
       guestName,
       guestPhone,
@@ -161,7 +164,8 @@ export class BookingsService {
     return prisma.booking.create({
       data: {
         hotelId,
-        roomId,
+        roomId: roomId || null,
+        roomNumber: roomNumber || null,
         plan: plan || null,
         guestName,
         guestPhone,
