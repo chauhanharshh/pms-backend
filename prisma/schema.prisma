@@ -418,6 +418,7 @@ model Invoice {
   createdBy         String?          @db.Uuid
   updatedBy         String?          @db.Uuid
   paymentMethod     String?          @db.VarChar(50)
+  modeOfPayment     String?          @db.VarChar(50)
   restaurantOrderId String?          @unique @db.Uuid
   serviceCharge     Decimal          @default(0) @db.Decimal(10, 2)
   source            String?          @db.VarChar(50)
