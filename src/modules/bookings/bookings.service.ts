@@ -355,22 +355,29 @@ export class BookingsService {
     }
 
     return prisma.$transaction(async (tx) => {
-      const [updatedBooking] = await Promise.all([
+      const updates: any[] = [
         tx.booking.update({
           where: { id: bookingId },
           data: {
             status: 'cancelled',
             updatedBy: userId,
           },
-        }),
-        tx.room.update({
-          where: { id: booking.roomId },
-          data: {
-            status: 'vacant',
-            updatedBy: userId,
-          },
         })
-      ]);
+      ];
+
+      if (booking.roomId) {
+        updates.push(
+          tx.room.update({
+            where: { id: booking.roomId },
+            data: {
+              status: 'vacant',
+              updatedBy: userId,
+            },
+          })
+        );
+      }
+
+      const [updatedBooking] = await Promise.all(updates);
 
       logger.info(`Booking ${bookingId} cancelled by user ${userId}`);
       return updatedBooking;
@@ -397,7 +404,7 @@ export class BookingsService {
 
     if (!booking) throw new NotFoundError('Booking not found');
     if (booking.status !== 'confirmed' && booking.status !== 'pending') throw new BadRequestError('Only pending or confirmed bookings can be checked in');
-    if (booking.room.status !== 'vacant') throw new BadRequestError('Room is not vacant');
+    if (booking.room && booking.room.status !== 'vacant') throw new BadRequestError('Room is not vacant');
 
     const parsedCheckInDate = data?.checkInDate ? new Date(data.checkInDate) : null;
     const parsedCheckOutDate = data?.checkOutDate ? new Date(data.checkOutDate) : null;
@@ -409,7 +416,7 @@ export class BookingsService {
       : booking.checkOutDate;
 
     return prisma.$transaction(async (tx) => {
-      const [updatedBooking] = await Promise.all([
+      const checkInUpdates: any[] = [
         tx.booking.update({
           where: { id: bookingId },
           data: {
@@ -423,12 +430,19 @@ export class BookingsService {
             updatedBy: userId,
           } as any,
           include: { room: true, advancePayments: true, hotel: true },
-        }),
-        tx.room.update({
-          where: { id: booking.roomId },
-          data: { status: 'occupied', updatedBy: userId },
         })
-      ]);
+      ];
+
+      if (booking.roomId) {
+        checkInUpdates.push(
+          tx.room.update({
+            where: { id: booking.roomId },
+            data: { status: 'occupied', updatedBy: userId },
+          })
+        );
+      }
+
+      const [updatedBooking] = await Promise.all(checkInUpdates);
 
       const checkInDateTime = new Date(resolvedCheckInDate);
       const [ciH, ciM] = (data?.checkInTime ?? (booking.checkInTime || "14:00")).split(':').map(Number);
@@ -439,7 +453,9 @@ export class BookingsService {
       checkOutDateTime.setHours(coH, coM || 0, 0, 0);
 
       const nights = calculateRoomDays(checkInDateTime, checkOutDateTime, (booking as any).hotel?.checkOutTime);
-      const basePrice = (booking as any).roomPrice ? new Decimal((booking as any).roomPrice.toString()) : booking.room.basePrice;
+      const basePrice = (booking as any).roomPrice 
+        ? new Decimal((booking as any).roomPrice.toString()) 
+        : (booking.room?.basePrice || new Decimal(0));
       const roomCharges = basePrice.mul(nights);
       
       // Calculate taxes based on 5%/18% rule
@@ -545,7 +561,7 @@ export class BookingsService {
     return {
       bookingId: booking.id,
       guestName: booking.guestName,
-      roomNumber: booking.room.roomNumber,
+      roomNumber: booking.room?.roomNumber || booking.roomNumber || 'Unassigned',
       roomCharges: roomCharges.toNumber(),
       miscCharges: miscTotal.toNumber(),
       restaurantCharges: restaurantTotal.toNumber(),
@@ -723,10 +739,12 @@ export class BookingsService {
         data: { status: 'checked_out', updatedBy: userId },
       });
 
-      await tx.room.update({
-        where: { id: booking.roomId },
-        data: { status: 'cleaning', updatedBy: userId },
-      });
+      if (booking.roomId) {
+        await tx.room.update({
+          where: { id: booking.roomId },
+          data: { status: 'cleaning', updatedBy: userId },
+        });
+      }
 
       logger.info(`Check-out completed for booking ${bookingId}`);
       return { bookingId, totalAmount, paidAmount: totalPaidAmount, balanceDue: resultingBalance };
