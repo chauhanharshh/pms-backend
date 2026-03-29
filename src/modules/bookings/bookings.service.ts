@@ -675,9 +675,15 @@ export class BookingsService {
       // Synchronize associated Invoice strictly setting to 'paid' on successful checkout
       const linkedInvoice = await tx.invoice.findUnique({ where: { billId: bill.id } });
       if (linkedInvoice) {
+        // Fixed: checkout payment mode saved to invoice for correct 
+        // Cash/Bank column in Revenue Report
         await tx.invoice.update({
           where: { id: linkedInvoice.id },
-          data: { status: InvoiceStatus.paid, updatedBy: userId },
+          data: { 
+            status: InvoiceStatus.paid, 
+            paymentMethod: paymentMode?.toUpperCase() || 'CASH',
+            updatedBy: userId 
+          },
         });
       }
 
@@ -736,7 +742,11 @@ export class BookingsService {
 
       await tx.booking.update({
         where: { id: bookingId },
-        data: { status: 'checked_out', updatedBy: userId },
+        data: { 
+            status: 'checked_out', 
+            paymentMode: mapPaymentMethod(paymentMode || 'cash'),
+            updatedBy: userId 
+        },
       });
 
       if (booking.roomId) {
