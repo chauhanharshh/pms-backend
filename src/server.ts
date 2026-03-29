@@ -111,6 +111,11 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), service: 'Hotels4U PMS' });
 });
 
+// V1 API health check (used by AppLayout frontend ping for Render.com keep-alive)
+app.get('/api/v1/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), version: 'v1' });
+});
+
 // API routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/hotels', hotelsRoutes);
